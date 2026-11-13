@@ -1,0 +1,33 @@
+name: Deploy database
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never two migration runs against the same database at once; never cancel one halfway.
+concurrency:
+  group: deploy-db-${{ github.ref_name }}
+  cancel-in-progress: false
+
+# develop → staging, main → production. Each GitHub Environment only accepts its own branch, and
+# holds SUPABASE_DB_URL (the session pooler: GitHub runners have no IPv6 for the direct host).
+# Migrations are backward compatible, so it's safe that Vercel deploys the app at the same time.
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Pending migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: pnpm exec supabase db push --remote="$SUPABASE_DB_URL" --dry-run
+      - name: Apply migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: pnpm exec supabase db push --remote="$SUPABASE_DB_URL" --yes

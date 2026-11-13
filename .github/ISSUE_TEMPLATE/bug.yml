@@ -1,0 +1,31 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect to see?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See error
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and OS, or "local dev" / "live demo"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Include the request ID from the error message if there is one.

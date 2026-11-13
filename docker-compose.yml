@@ -1,0 +1,18 @@
+# Local S3-compatible storage, standing in for Cloudflare R2 (same S3 API, same app code).
+# RustFS replaces MinIO, whose community images are no longer published.
+# Local Supabase runs separately through the Supabase CLI (`pnpm db:start` starts both).
+services:
+  storage:
+    image: rustfs/rustfs:1.0.5
+    environment:
+      RUSTFS_ACCESS_KEY: lockerly-local
+      RUSTFS_SECRET_KEY: lockerly-local-secret
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports:
+      - "9100:9000" # S3 API
+      - "9101:9001" # web console
+    volumes:
+      - storage-data:/data
+
+volumes:
+  storage-data:
