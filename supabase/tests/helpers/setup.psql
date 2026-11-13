@@ -1,0 +1,191 @@
+-- Test helpers, included at the top of each test file (inside its transaction, so they vanish with
+-- the rollback). Things are referred to by short labels ('owner', 'F', 'f1') rather than uuids, so
+-- failures read like the fixture.
+
+create extension if not exists pgtap with schema extensions;
+
+create schema tests;
+
+create table tests.ids (label text primary key, id uuid not null unique);
+
+-- The id behind a label. Fails loudly on a typo instead of returning NULL. Volatile on purpose: the
+-- planner evaluates stable functions early, before labels added in the same block exist.
+create function tests.id(p_label text)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid;
+begin
+  select id into v_id from tests.ids where label = p_label;
+  if v_id is null then
+    raise exception 'tests.id: unknown label %', p_label;
+  end if;
+  return v_id;
+end;
+$$;
+
+-- The label behind an id, or the id itself for rows the fixture didn't name.
+create function tests.label(p_id uuid)
+returns text
+language sql
+as $$ select coalesce((select label from tests.ids where id = p_id), p_id::text) $$;
+
+-- Runs a query returning one text column and gives back its values sorted, so results can be
+-- compared with an expected list regardless of row order.
+create function tests.rows(p_query text)
+returns text[]
+language plpgsql
+as $$
+declare
+  v_rows text[];
+begin
+  execute format('select coalesce(array_agg(l order by l collate "C"), ''{}'') from (%s) s(l)', p_query)
+    into v_rows;
+  return v_rows;
+end;
+$$;
+
+create function tests.sorted(p_values text[])
+returns text[]
+language sql
+immutable
+as $$ select coalesce(array_agg(v order by v collate "C"), '{}') from unnest(p_values) v $$;
+
+-- Runs a write and returns how many rows it changed. RLS hides rows from UPDATE and DELETE
+-- silently, so "0 rows" is how a refused write shows up.
+create function tests.affected(p_sql text)
+returns integer
+language plpgsql
+as $$
+declare
+  v_count integer;
+begin
+  execute p_sql;
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+-- Users ---------------------------------------------------------------------------------------------
+
+-- Creates a user the way Supabase Auth does (the sign-up trigger makes the profile). Their email is
+-- `<label>@test.dev`.
+create function tests.create_user(p_label text, p_confirmed boolean default true)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+begin
+  insert into auth.users (
+    instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  ) values (
+    '00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated',
+    p_label || '@test.dev', '', case when p_confirmed then now() end,
+    '{"provider": "email", "providers": ["email"]}', jsonb_build_object('full_name', initcap(p_label)),
+    now(), now()
+  );
+  insert into tests.ids values (p_label, v_id);
+  return v_id;
+end;
+$$;
+
+-- Acts as a signed-in user for the statements that follow, exactly as a request with their JWT
+-- would: role `authenticated` and `auth.uid()` returning their id.
+create function tests.authenticate_as(p_label text)
+returns void
+language plpgsql
+as $$
+declare
+  v_id uuid := tests.id(p_label);
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', v_id, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+end;
+$$;
+
+-- Acts as a visitor with only the publishable key.
+create function tests.authenticate_as_anon()
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claims', '{"role": "anon"}', true);
+  perform set_config('role', 'anon', true);
+end;
+$$;
+
+-- Back to the test runner's own role, which bypasses RLS (for setup and for checking results).
+create function tests.clear_authentication()
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('role', 'none', true);
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Items (created as the test runner, so they skip the API rules) ------------------------------------
+
+create function tests.new_folder(p_label text, p_owner text, p_parent text, p_name text)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.items (owner_id, parent_id, kind, name)
+  values (tests.id(p_owner), case when p_parent is not null then tests.id(p_parent) end, 'folder', p_name)
+  returning id into v_id;
+  insert into tests.ids values (p_label, v_id);
+  return v_id;
+end;
+$$;
+
+create function tests.new_file(
+  p_label text, p_owner text, p_parent text, p_name text,
+  p_size bigint default 1000, p_mime_type text default 'application/pdf',
+  p_status public.item_status default 'ready'
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.items (owner_id, parent_id, kind, name, size, mime_type, object_key, status)
+  values (
+    tests.id(p_owner), case when p_parent is not null then tests.id(p_parent) end, 'file', p_name,
+    p_size, p_mime_type, 'u/' || tests.id(p_owner) || '/' || p_label, p_status
+  )
+  returning id into v_id;
+  insert into tests.ids values (p_label, v_id);
+  return v_id;
+end;
+$$;
+
+create function tests.new_link(
+  p_label text, p_item text, p_token text,
+  p_expires_at timestamptz default null, p_revoked_at timestamptz default null
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.share_links (item_id, token_hash, expires_at, revoked_at, created_by)
+  select i.id, extensions.digest(p_token, 'sha256'), p_expires_at, p_revoked_at, i.owner_id
+  from public.items i where i.id = tests.id(p_item)
+  returning id into v_id;
+  insert into tests.ids values (p_label, v_id);
+  return v_id;
+end;
+$$;
+
+grant usage on schema tests to anon, authenticated, service_role;
+grant select on tests.ids to anon, authenticated, service_role;
+grant execute on all functions in schema tests to anon, authenticated, service_role;

@@ -1,0 +1,66 @@
+-- The world the access tests run against. Include after setup.psql.
+--
+-- People: owner, editor, viewer, stranger (all confirmed).
+--
+-- owner's drive                                   shared
+--   F  Projects/                                  editor (editor) ← covers everything below
+--   ├── f1  plan.pdf
+--   ├── t1  old.pdf          (in the trash)
+--   ├── p1  uploading.zip    (upload not finished)
+--   ├── e1  notes.md         (uploaded by editor, so editor owns it)
+--   └── Sub Designs/                              viewer (viewer) ← covers everything below
+--       ├── f2  logo.png
+--       └── Deep Archive/
+--           └── f4  draft.txt
+--   R  private.txt                                not shared
+-- editor's drive: EF Mine/      viewer's drive: VR v.txt      stranger's drive: SR s.txt
+--
+-- Pending invite: F → friend@test.dev (viewer).
+-- Links: L_sub on Sub (token 'sub-token', live), L_rev on F (revoked), L_exp on f1 (expired).
+-- Stars: owner ★ f1, viewer ★ f2.  Recents: editor → f1, viewer → f2.
+
+do $$
+begin
+  perform tests.create_user('owner');
+  perform tests.create_user('editor');
+  perform tests.create_user('viewer');
+  perform tests.create_user('stranger');
+
+  perform tests.new_folder('F', 'owner', null, 'Projects');
+  perform tests.new_folder('Sub', 'owner', 'F', 'Designs');
+  perform tests.new_folder('Deep', 'owner', 'Sub', 'Archive');
+  perform tests.new_file('f1', 'owner', 'F', 'plan.pdf');
+  perform tests.new_file('f2', 'owner', 'Sub', 'logo.png', p_mime_type => 'image/png');
+  perform tests.new_file('f4', 'owner', 'Deep', 'draft.txt', p_mime_type => 'text/plain');
+  perform tests.new_file('R', 'owner', null, 'private.txt', p_mime_type => 'text/plain');
+  perform tests.new_file('t1', 'owner', 'F', 'old.pdf');
+  perform tests.new_file('p1', 'owner', 'F', 'uploading.zip', p_mime_type => 'application/zip', p_status => 'pending');
+  perform tests.new_file('e1', 'editor', 'F', 'notes.md', p_mime_type => 'text/markdown');
+  perform tests.new_folder('EF', 'editor', null, 'Mine');
+  perform tests.new_file('VR', 'viewer', null, 'v.txt', p_mime_type => 'text/plain');
+  perform tests.new_file('SR', 'stranger', null, 's.txt', p_mime_type => 'text/plain');
+
+  update public.items
+  set trashed_at = now(), trashed_by = tests.id('owner'), trash_root = id
+  where id = tests.id('t1');
+
+  insert into public.item_shares (item_id, user_id, role, created_by) values
+    (tests.id('F'), tests.id('editor'), 'editor', tests.id('owner')),
+    (tests.id('Sub'), tests.id('viewer'), 'viewer', tests.id('owner'));
+
+  insert into public.share_invites (item_id, email, role, created_by)
+  values (tests.id('F'), 'friend@test.dev', 'viewer', tests.id('owner'));
+
+  perform tests.new_link('L_sub', 'Sub', 'sub-token');
+  perform tests.new_link('L_rev', 'F', 'revoked-token', p_revoked_at => now());
+  perform tests.new_link('L_exp', 'f1', 'expired-token', p_expires_at => now() - interval '1 day');
+
+  insert into public.stars (user_id, item_id) values
+    (tests.id('owner'), tests.id('f1')),
+    (tests.id('viewer'), tests.id('f2'));
+
+  insert into public.recents (user_id, item_id) values
+    (tests.id('editor'), tests.id('f1')),
+    (tests.id('viewer'), tests.id('f2'));
+end;
+$$;
