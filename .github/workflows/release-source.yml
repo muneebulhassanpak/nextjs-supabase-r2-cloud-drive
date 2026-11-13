@@ -1,0 +1,24 @@
+name: Release source
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+# Production only receives what has been through staging. Job id `release-source` is a required
+# check in the main ruleset.
+jobs:
+  release-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: PRs into main come from develop or a hotfix branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          case "$HEAD_REF" in
+            develop|hotfix/*) echo "OK: $HEAD_REF";;
+            *) echo "::error::PRs into main must come from develop (a release) or hotfix/* (got $HEAD_REF)."; exit 1;;
+          esac

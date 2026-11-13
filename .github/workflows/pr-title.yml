@@ -1,0 +1,35 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            docs
+            test
+            refactor
+            perf
+            ci
+            build
+            revert
+          requireScope: false
+          subjectPattern: ^[a-z].+[^.]$
+          # Dependabot writes "Bump ..." with a capital letter; its PRs are labelled and skipped here.
+          ignoreLabels: |
+            dependencies
+          subjectPatternError: |
+            The subject "{subject}" must start with a lowercase letter and must not end with a period.
