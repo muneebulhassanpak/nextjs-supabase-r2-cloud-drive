@@ -105,6 +105,7 @@ pnpm exec supabase migration new <name> < /dev/null   # creates supabase/migrati
 pnpm db:reset                                         # rebuild the local database from all migrations
 pnpm db:test                                          # pgTAP
 pnpm db:types                                         # regenerate src/server/db/database.types.ts
+pnpm db:mutations                                     # prove every policy is tested (a few minutes)
 ```
 
 Rules:
@@ -113,7 +114,9 @@ Rules:
 2. Never edit a migration that has reached `develop`. Add a new one.
 3. Migrations must work with the version already running (add columns as nullable or with a default; remove things in a later release). Staging and production apply them while the old app is still serving.
 4. Migrations that change data must be safe to run twice.
-5. Privileged (`SECURITY DEFINER`) functions live in the `private` schema and set `search_path = ''`. The guard tests in `supabase/tests/00_guards.test.sql` enforce the basics.
+5. Privileged (`SECURITY DEFINER`) functions live in the `private` schema and set `search_path = ''`. The guard tests in `supabase/tests/00_guards.test.sql` enforce the basics, including which functions each API role may call.
+6. Access tests use the shared fixture in `supabase/tests/helpers/fixture.psql` (an owner, an editor, a viewer, a stranger and a visitor) and state the full list of rows each person should see, so anything extra fails.
+7. Before merging a policy change, run `pnpm db:mutations`. It drops each policy, then opens it up to `true`, and checks the suite notices both times.
 
 ## Code layout
 
