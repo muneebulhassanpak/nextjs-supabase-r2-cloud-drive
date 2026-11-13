@@ -1,0 +1,28 @@
+name: Local stack
+description: Start local Supabase (only the services the app uses) and the S3 storage container
+inputs:
+  services:
+    description: "all = API, Auth and Mailpit; db = Postgres only"
+    default: all
+runs:
+  using: composite
+  steps:
+    # Local Supabase listens on 553xx. Linux picks outgoing ports from 32768-60999, so an outgoing
+    # connection on the runner can already hold one of them. Move outgoing ports below 50000.
+    - name: Keep the stack's ports free
+      shell: bash
+      run: sudo sysctl -w net.ipv4.ip_local_port_range="32768 49999"
+    - name: Start Supabase
+      shell: bash
+      run: |
+        if [ "${{ inputs.services }}" = "db" ]; then
+          pnpm exec supabase db start
+        else
+          pnpm exec supabase start -x studio,postgres-meta,imgproxy,logflare,vector,supavisor,edge-runtime,realtime,storage-api
+        fi
+    - name: Start storage
+      if: inputs.services != 'db'
+      shell: bash
+      run: |
+        docker compose up -d
+        pnpm storage:init
