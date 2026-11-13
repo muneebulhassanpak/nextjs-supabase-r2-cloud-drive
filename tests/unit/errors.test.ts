@@ -87,16 +87,47 @@ describe("withErrorHandling", () => {
 
 describe("database errors", () => {
   /** How supabase-js surfaces a Postgres error: a plain object with the SQLSTATE in `code`. */
-  function dbError(code: string) {
-    return { code, message: "denied", details: null, hint: null };
+  function dbError(code: string, message = "denied") {
+    return { code, message, details: null, hint: null };
   }
 
   it.each([
     ["42501", 403, "forbidden"],
+    ["P0002", 404, "not_found"],
     ["23505", 409, "conflict"],
     ["23503", 409, "conflict"],
+    ["LK409", 409, "conflict"],
+    ["LK413", 413, "quota_exceeded"],
+    ["LK422", 422, "validation_error"],
+    ["22023", 422, "validation_error"],
+    ["23514", 422, "validation_error"],
+    ["22P02", 422, "validation_error"],
   ])("maps SQLSTATE %s to %s", (sqlState, status, code) => {
     expect(toErrorBody(dbError(sqlState))).toMatchObject({ status, body: { code } });
+  });
+
+  it("shows the database's own message only for errors our SQL raises on purpose", () => {
+    const quota = toErrorBody(dbError("LK413", "Files can be at most 25 MB"));
+    expect(quota.body.message).toBe("Files can be at most 25 MB");
+
+    const constraint = toErrorBody(
+      dbError("23514", 'new row for relation "items" violates check constraint "items_name_valid"'),
+    );
+    expect(constraint.body.message).toBe("That isn't valid.");
+
+    // Postgres raises 22023 itself too, so only our own LK422 shows its message.
+    const ours = toErrorBody(dbError("LK422", "Items can only go inside a folder"));
+    expect(ours.body.message).toBe("Items can only go inside a folder");
+    const internal = toErrorBody(dbError("22023", "unrecognized configuration parameter"));
+    expect(internal.body.message).toBe("That isn't valid.");
+
+    const notFound = toErrorBody(dbError("P0002", "Item not found"));
+    expect(notFound.body.message).not.toContain("Item not found");
+  });
+
+  it("falls back to a generic message when the database sent none", () => {
+    expect(toErrorBody(dbError("LK409", "")).body.message).toBe("That can't be done right now.");
+    expect(toErrorBody({ code: "LK413" }).body.message).toBe("Not enough storage space left.");
   });
 
   it("treats other database errors as unexpected", () => {
