@@ -25,12 +25,9 @@ export function Field({ label, errors, hint, action, adornment, className, ...in
   const messageId = `${id}-message`;
   const message = errors?.[0] ?? hint;
   return (
-    <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id}>{label}</Label>
-        {action}
-      </div>
-      <div className="relative">
+    <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative col-span-2">
         <Input
           id={id}
           aria-invalid={errors?.length ? true : undefined}
@@ -42,10 +39,15 @@ export function Field({ label, errors, hint, action, adornment, className, ...in
           <div className="absolute inset-y-0 right-1 flex items-center">{adornment}</div>
         )}
       </div>
+      {/* After the input in tab order, but shown at the end of the label's line. */}
+      {action && <div className="col-start-2 row-start-1">{action}</div>}
       {message && (
         <p
           id={messageId}
-          className={errors?.length ? "text-sm text-destructive" : "text-sm text-muted-foreground"}
+          className={cn(
+            "col-span-2 text-sm",
+            errors?.length ? "text-destructive" : "text-muted-foreground",
+          )}
         >
           {message}
         </p>
@@ -68,13 +70,12 @@ export function PasswordField(props: Omit<FieldProps, "type" | "adornment">) {
           variant="ghost"
           size="icon-sm"
           className="text-muted-foreground"
-          aria-pressed={visible}
           onClick={() => {
             setVisible((shown) => !shown);
           }}
         >
           <Icon />
-          <span className="sr-only">Show password</span>
+          <span className="sr-only">{visible ? "Hide password" : "Show password"}</span>
         </Button>
       }
     />
