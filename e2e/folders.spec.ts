@@ -19,7 +19,8 @@ async function signInAsNewUser(page: Page) {
 }
 
 async function newFolder(page: Page, name: string) {
-  await page.getByRole("button", { name: "New folder" }).click();
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New folder" }).click();
   await field(page, "Name").fill(name);
   await page.getByRole("button", { name: "Create" }).click();
   await expect(row(page, name)).toBeVisible();
@@ -91,7 +92,8 @@ test("rename and trash, with clashing names caught before saving", async ({ page
 
 test("the suggested name works, and keys pressed in a menu stay in the menu", async ({ page }) => {
   await signInAsNewUser(page);
-  await page.getByRole("button", { name: "New folder" }).click();
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New folder" }).click();
   await page.getByRole("button", { name: "Create" }).click();
   await expect(row(page, "Untitled folder")).not.toHaveAttribute("aria-disabled", "true");
 
