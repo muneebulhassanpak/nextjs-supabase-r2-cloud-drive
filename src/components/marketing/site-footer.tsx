@@ -1,9 +1,8 @@
 import { Brand } from "@/components/brand";
 import { TextLink } from "@/components/text-link";
+import { REPO_URL } from "@/lib/site";
 
 import { Container } from "./section";
-
-const REPO = "https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive";
 
 const COLUMNS = [
   {
@@ -23,8 +22,8 @@ const COLUMNS = [
   {
     title: "Project",
     links: [
-      { href: REPO, label: "Source code" },
-      { href: `${REPO}/blob/main/CHANGELOG.md`, label: "Changelog" },
+      { href: REPO_URL, label: "Source code" },
+      { href: `${REPO_URL}/blob/main/CHANGELOG.md`, label: "Changelog" },
     ],
   },
 ];
