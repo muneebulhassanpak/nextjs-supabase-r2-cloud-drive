@@ -66,6 +66,8 @@ export async function getMyDriveRoot(): Promise<FolderView> {
     .is("parent_id", null)
     .is("trashed_at", null)
     .eq("status", "ready")
+    // Folders first (the enum lists them first), then by name, so a full page is predictable.
+    .order("kind")
     .order("name")
     .order("id")
     .limit(FOLDER_PAGE_SIZE)
@@ -98,6 +100,7 @@ export const getFolder = cache(async (folderId: string): Promise<FolderView | nu
       .eq("parent_id", folderId)
       .is("trashed_at", null)
       .eq("status", "ready")
+      .order("kind")
       .order("name")
       .order("id")
       .limit(FOLDER_PAGE_SIZE)
