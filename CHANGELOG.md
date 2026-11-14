@@ -7,6 +7,23 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-14
+
+### Added
+
+- A new landing page: what Lockerly does, short clips recorded in the real app (upload, preview, organise) in the light or dark theme to match the page, the tech stack, and how files are kept private.
+- `pnpm record:demos` re-records those clips from the local app (needs ffmpeg).
+
+### Changed
+
+- One design system across the site: violet theme, surfaces, a type scale, colours per file type and motion tokens. Sign-in, sign-up and the password pages use a new centred card and share the landing page's header.
+- The password field can show what's been typed.
+- Animations respect "reduce motion": the page stays still, and clips never start by themselves and can always be paused.
+
+### Fixed
+
+- Folder pages list folders first and then names in a fixed order, so the first page of a large folder is always the same.
+
 ## [0.6.0] - 2026-11-14
 
 ### Added
@@ -98,7 +115,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Three environments: local (Supabase CLI and RustFS in Docker), staging (`develop`) and production (`main`). Database changes reach staging and production automatically after review.
 - Checks on every pull request: lint, types, unit and integration tests with coverage, database tests (pgTAP), a production build and browser tests on desktop and phone sizes.
 
-[Unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/releases/tag/v0.1.0
