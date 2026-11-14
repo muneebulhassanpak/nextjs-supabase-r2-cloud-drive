@@ -48,7 +48,7 @@ export function anonClient(): Client {
 }
 
 /** The local admin API (bypasses row-level security): only for setting up test users. */
-function adminClient(): Client {
+export function adminClient(): Client {
   return createClient<Database>(LOCAL_API_URL, local("SECRET_KEY"), noSession);
 }
 
