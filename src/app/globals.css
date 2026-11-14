@@ -25,6 +25,37 @@
   --shadow-soft: var(--elevation-1);
   --shadow-float: var(--elevation-2);
 
+  /* Layout: the width marketing pages line up to (max-w-page). */
+  --container-page: 88rem;
+
+  /* Motion: enter with ease-out, move with ease-in-out; exits are faster than enters. */
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --animate-enter: enter 0.7s var(--ease-out-quint) var(--stagger-delay, 0s) both;
+  --animate-float: float 6s var(--ease-in-out-cubic) var(--stagger-delay, 0s) infinite;
+  --animate-progress: progress 3.2s var(--ease-in-out-cubic) infinite;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+  }
+  @keyframes float {
+    50% {
+      transform: translateY(-0.375rem);
+    }
+  }
+  @keyframes progress {
+    0% {
+      transform: scaleX(0.15);
+    }
+    70%,
+    100% {
+      transform: scaleX(0.95);
+    }
+  }
+
   /* Type scale for marketing and page headings: large, medium weight, tight tracking. */
   --text-display: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
   --text-display--line-height: 1.04;
@@ -205,7 +236,7 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans motion-safe:scroll-smooth;
   }
 }
 
@@ -215,6 +246,61 @@
     linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   background-size: 2.5rem 2.5rem;
+}
+
+/*
+ * Staggers entrances: stagger-1 starts 90ms after stagger-0, and so on. A variable the animations
+ * above read, because their shorthand would reset a plain animation-delay.
+ */
+@property --stagger-delay {
+  syntax: "<time>";
+  inherits: false; /* a delay on a wrapper shouldn't hold back what's inside it */
+  initial-value: 0s;
+}
+
+@utility stagger-* {
+  --stagger-delay: calc(--value(integer) * 90ms);
+}
+
+/*
+ * Fades a section in as it scrolls into view. Scroll-driven, so no script and nothing hidden
+ * if the browser can't do it; skipped entirely for people who prefer less motion.
+ */
+@utility reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: enter linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+  }
+}
+
+/*
+ * A sticky header that's see-through at the top of the page and gains its background and border
+ * once the page scrolls under it. Pages too short to scroll keep it see-through. Without
+ * scroll-driven animations it's simply solid.
+ */
+@utility scroll-edge {
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--background) 80%, transparent);
+  backdrop-filter: blur(12px);
+  @supports (animation-timeline: scroll()) {
+    border-bottom-color: transparent;
+    background-color: transparent;
+    backdrop-filter: none;
+    animation: scroll-edge linear both;
+    animation-timeline: scroll();
+    animation-range: 0 4rem;
+  }
+}
+
+@keyframes scroll-edge {
+  to {
+    border-bottom-color: var(--border);
+    background-color: color-mix(in oklch, var(--background) 80%, transparent);
+    backdrop-filter: blur(12px);
+  }
 }
 
 /* Shiki's token colours for both themes (see components/preview/code-view.tsx). */
