@@ -140,11 +140,9 @@ test("a session from a password sign-in can't set a new password", async ({ page
 test("the password can be shown while typing it", async ({ page }) => {
   await page.goto("/sign-in");
   await field(page, "Password").fill("not-a-secret");
-  const toggle = page.getByRole("button", { name: "Show password" });
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Show password" }).click();
   await expect(field(page, "Password")).toHaveAttribute("type", "text");
-  await toggle.click();
+  await page.getByRole("button", { name: "Hide password" }).click();
   await expect(field(page, "Password")).toHaveAttribute("type", "password");
 });
 
