@@ -61,6 +61,7 @@ Requirements: Node.js 22 (see `.nvmrc`), [pnpm](https://pnpm.io) 10 and Docker (
 ```bash
 pnpm install        # also installs the pre-commit hooks
 pnpm db:start       # local Supabase + S3 storage in Docker (the first run downloads images)
+pnpm seed:files     # optional: ava@demo.dev / demo-pass-123 with a file of every previewable type
 pnpm dev            # http://localhost:3000
 ```
 
