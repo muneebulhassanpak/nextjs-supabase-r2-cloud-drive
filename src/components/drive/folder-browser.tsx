@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/sheet";
 import { useUploads } from "@/components/uploads/upload-provider";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { TRASH_BATCH_SIZE } from "@/lib/drive/names";
+import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import { sortItems, type Sort, type SortKey } from "@/lib/drive/sort";
 import type { Crumb, DriveItem, DriveView } from "@/lib/drive/types";
 import { download } from "@/lib/files/api";
@@ -162,6 +162,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
           updatedAt: new Date().toISOString(),
           parentId: folder?.id ?? null,
           owner: { id: currentUserId, name: null, email: null },
+          starred: false,
         },
       });
       const result = await createFolder(folder?.id ?? null, name);
@@ -185,8 +186,8 @@ export function FolderBrowser(props: FolderBrowserProps) {
     startTransition(async () => {
       change({ type: "remove", ids });
       // The server takes a limited number per request; stop at the first batch that fails.
-      for (let start = 0; start < ids.length; start += TRASH_BATCH_SIZE) {
-        const result = await trashItems(ids.slice(start, start + TRASH_BATCH_SIZE));
+      for (let start = 0; start < ids.length; start += ITEMS_PER_REQUEST) {
+        const result = await trashItems(ids.slice(start, start + ITEMS_PER_REQUEST));
         if (!result.ok) {
           toast.error(result.error.message);
           return;
