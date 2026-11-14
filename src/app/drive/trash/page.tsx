@@ -1,19 +1,40 @@
-import { Trash2 } from "lucide-react";
+import { Suspense } from "react";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { PageHeader } from "@/components/app/page-header";
+import { BrowserSkeleton } from "@/components/drive/browser-skeleton";
+import { FolderBrowser } from "@/components/drive/folder-browser";
+import { parseSort } from "@/lib/drive/sort";
+import { getTrash } from "@/server/services/drive";
+import { getMyProfile } from "@/server/services/profile";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Trash" };
 
-export default function TrashPage() {
+async function Trash({
+  searchParams,
+}: {
+  searchParams: PageProps<"/drive/trash">["searchParams"];
+}) {
+  const [items, profile, params] = await Promise.all([getTrash(), getMyProfile(), searchParams]);
   return (
-    <>
-      <PageHeader title="Trash" />
-      <EmptyState icon={Trash2} title="Trash is empty">
-        Items you delete stay here for 30 days, then they&apos;re removed for good.
-      </EmptyState>
-    </>
+    <FolderBrowser
+      mode="trash"
+      folder={null}
+      items={items}
+      crumbs={[]}
+      sharedRoot={false}
+      sort={parseSort(params)}
+      view={profile.driveView}
+      canEdit={false}
+      currentUserId={profile.id}
+    />
+  );
+}
+
+export default function TrashPage({ searchParams }: PageProps<"/drive/trash">) {
+  return (
+    <Suspense fallback={<BrowserSkeleton />}>
+      <Trash searchParams={searchParams} />
+    </Suspense>
   );
 }

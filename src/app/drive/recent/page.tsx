@@ -1,19 +1,40 @@
-import { Clock } from "lucide-react";
+import { Suspense } from "react";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { PageHeader } from "@/components/app/page-header";
+import { BrowserSkeleton } from "@/components/drive/browser-skeleton";
+import { FolderBrowser } from "@/components/drive/folder-browser";
+import { parseSort } from "@/lib/drive/sort";
+import { getRecent } from "@/server/services/drive";
+import { getMyProfile } from "@/server/services/profile";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Recent" };
 
-export default function RecentPage() {
+async function Recent({
+  searchParams,
+}: {
+  searchParams: PageProps<"/drive/recent">["searchParams"];
+}) {
+  const [items, profile, params] = await Promise.all([getRecent(), getMyProfile(), searchParams]);
   return (
-    <>
-      <PageHeader title="Recent" />
-      <EmptyState icon={Clock} title="No recent files">
-        Files you open or change show up here, newest first.
-      </EmptyState>
-    </>
+    <FolderBrowser
+      mode="recent"
+      folder={null}
+      items={items}
+      crumbs={[]}
+      sharedRoot={false}
+      sort={parseSort(params)}
+      view={profile.driveView}
+      canEdit={false}
+      currentUserId={profile.id}
+    />
+  );
+}
+
+export default function RecentPage({ searchParams }: PageProps<"/drive/recent">) {
+  return (
+    <Suspense fallback={<BrowserSkeleton />}>
+      <Recent searchParams={searchParams} />
+    </Suspense>
   );
 }

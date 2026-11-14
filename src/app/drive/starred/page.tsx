@@ -1,19 +1,40 @@
-import { Star } from "lucide-react";
+import { Suspense } from "react";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { PageHeader } from "@/components/app/page-header";
+import { BrowserSkeleton } from "@/components/drive/browser-skeleton";
+import { FolderBrowser } from "@/components/drive/folder-browser";
+import { parseSort } from "@/lib/drive/sort";
+import { getStarred } from "@/server/services/drive";
+import { getMyProfile } from "@/server/services/profile";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Starred" };
 
-export default function StarredPage() {
+async function Starred({
+  searchParams,
+}: {
+  searchParams: PageProps<"/drive/starred">["searchParams"];
+}) {
+  const [items, profile, params] = await Promise.all([getStarred(), getMyProfile(), searchParams]);
   return (
-    <>
-      <PageHeader title="Starred" />
-      <EmptyState icon={Star} title="No starred files">
-        Star the files and folders you use most to find them quickly.
-      </EmptyState>
-    </>
+    <FolderBrowser
+      mode="starred"
+      folder={null}
+      items={items}
+      crumbs={[]}
+      sharedRoot={false}
+      sort={parseSort(params)}
+      view={profile.driveView}
+      canEdit={false}
+      currentUserId={profile.id}
+    />
+  );
+}
+
+export default function StarredPage({ searchParams }: PageProps<"/drive/starred">) {
+  return (
+    <Suspense fallback={<BrowserSkeleton />}>
+      <Starred searchParams={searchParams} />
+    </Suspense>
   );
 }
