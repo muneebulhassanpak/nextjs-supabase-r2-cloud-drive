@@ -309,6 +309,32 @@ isOneToOne: false
 "touch_recent":
 { Args: { "p_item_id": string }; Returns: undefined
                            },
+"trash_entries":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "ancestors": (string)[],
+"category": Database["public"]['Enums']["item_category"] | null,
+"created_at": string,
+"id": string,
+"kind": Database["public"]['Enums']["item_kind"],
+"mime_type": string | null,
+"name": string,
+"object_key": string | null,
+"owner_id": string,
+"parent_id": string | null,
+"size": number | null,
+"status": Database["public"]['Enums']["item_status"],
+"trash_root": string | null,
+"trashed_at": string | null,
+"trashed_by": string | null,
+"updated_at": string,
+"updated_by": string | null
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "items"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
 "trash_item":
 { Args: { "p_item_id": string }; Returns: undefined
                            }
