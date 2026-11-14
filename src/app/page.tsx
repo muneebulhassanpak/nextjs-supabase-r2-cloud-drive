@@ -1,37 +1,327 @@
+import {
+  ArrowRight,
+  Check,
+  DatabaseZap,
+  Eye,
+  FlaskConical,
+  HardDrive,
+  Link2,
+  ServerCog,
+  ShieldCheck,
+  Timer,
+  Upload,
+} from "lucide-react";
 import Link from "next/link";
 
-import { Brand } from "@/components/brand";
-import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  DriveMockup,
+  PreviewMockup,
+  StorageMockup,
+  UploadsMockup,
+} from "@/components/marketing/mockups";
+import { Container, Eyebrow, IconChip, Panel, SectionIntro } from "@/components/marketing/section";
+import { SiteFooter } from "@/components/marketing/site-footer";
+import { SiteHeader } from "@/components/marketing/site-header";
+import { TextLink } from "@/components/text-link";
 import { buttonVariants } from "@/components/ui/button";
+import { FolderCard } from "@/components/ui/folder-card";
+import { cn } from "@/lib/utils";
+
+import type { ReactNode } from "react";
+
+const REPO = "https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive";
+
+const STACK = ["Next.js", "Supabase", "PostgreSQL", "Cloudflare R2", "Vercel"];
+
+const REASONS = [
+  {
+    icon: ShieldCheck,
+    title: "Private by default",
+    body: "Everything you upload is yours alone. The database checks who may see each file, on every request.",
+  },
+  {
+    icon: Eye,
+    title: "Opens in the browser",
+    body: "Photos, PDFs, video, audio and code open in place, with the rest of the folder a key press away.",
+  },
+  {
+    icon: Upload,
+    title: "Drop files anywhere",
+    body: "Drag files onto any folder. Uploads carry on while you move around, and pick up again after a dropped connection.",
+  },
+];
+
+const FEATURES: {
+  title: string;
+  body: string;
+  points: string[];
+  picture: ReactNode;
+}[] = [
+  {
+    title: "See where your space goes",
+    body: "Every account starts with 100 MB. The sidebar shows what's used at a glance, and uploads that won't fit are stopped before they start.",
+    points: ["Up to 25 MB per file", "Space comes back when you delete", "No surprise limits"],
+    picture: <StorageMockup />,
+  },
+  {
+    title: "Open files without downloading",
+    body: "A full-screen viewer for the files you use most. Step through a folder with the arrow keys, zoom into photos, and read code with highlighting.",
+    points: [
+      "Images, PDF, video, audio, text and code",
+      "Scripts are shown as source, never run",
+      "Download anything in one click",
+    ],
+    picture: <PreviewMockup />,
+  },
+  {
+    title: "Uploads you can rely on",
+    body: "Files go straight from your browser to storage, so big uploads stay fast. You see each one's progress, and nothing half-finished is left behind.",
+    points: [
+      "Cancel or retry any file",
+      "Name clashes become “name (1)”, never overwrite",
+      "Keeps going while you browse",
+    ],
+    picture: <UploadsMockup />,
+  },
+];
+
+const SAFEGUARDS = [
+  {
+    icon: DatabaseZap,
+    title: "Row-level security",
+    body: "Postgres decides what each person can read or change, on every table. A bug in the app can't hand out someone else's files.",
+  },
+  {
+    icon: Timer,
+    title: "Links that expire",
+    body: "Files are reached through signed links that stop working within minutes. Nothing in storage is public.",
+  },
+  {
+    icon: ServerCog,
+    title: "Storage kept apart",
+    body: "File contents live in Cloudflare R2, separate from the database, and only the server can sign a way in.",
+  },
+  {
+    icon: FlaskConical,
+    title: "Tested from every angle",
+    body: "Database tests try every role against every rule, and browser tests run the real app on each change.",
+  },
+];
 
 export default function HomePage() {
   return (
     <>
-      <header className="flex items-center justify-between gap-2 px-6 py-4">
-        <Brand />
-        <nav className="flex items-center gap-1" aria-label="Account">
-          <ThemeToggle />
-          <Link href="/sign-in" className={buttonVariants({ variant: "ghost" })}>
-            Sign in
-          </Link>
-        </nav>
-      </header>
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 px-6 pb-16 text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          Your files, safe and in one place.
-        </h1>
-        <p className="max-w-md text-balance text-muted-foreground">
-          Upload, organise, preview and share files. Start with 100 MB free.
-        </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Link href="/sign-up" className={buttonVariants({ size: "lg" })}>
-            Create a free account
-          </Link>
-          <Link href="/sign-in" className={buttonVariants({ size: "lg", variant: "outline" })}>
-            Sign in
-          </Link>
-        </div>
+      <SiteHeader />
+      <main className="flex-1">
+        <Hero />
+
+        <Container className="py-12">
+          <div className="flex flex-col items-center gap-x-12 gap-y-4 sm:flex-row sm:justify-between">
+            <p className="text-sm text-muted-foreground">Built on</p>
+            <ul className="flex flex-wrap justify-center gap-x-10 gap-y-3">
+              {STACK.map((name) => (
+                <li
+                  key={name}
+                  className="text-lg font-semibold tracking-tight text-muted-foreground/80"
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Container>
+
+        <section
+          id="features"
+          aria-labelledby="why-heading"
+          className="scroll-mt-20 py-16 sm:py-24"
+        >
+          <Container className="grid gap-12">
+            <SectionIntro
+              id="why-heading"
+              eyebrow="Why Lockerly"
+              title="A drive that keeps things simple, and keeps them yours"
+              description="Lockerly does the everyday things well: put files in, find them again, open them anywhere. The security is built into the database, not bolted on."
+            />
+            <div className="grid gap-6 md:grid-cols-3">
+              {REASONS.map((reason, index) => {
+                const Icon = reason.icon;
+                const highlight = index === 0;
+                return (
+                  <FolderCard key={reason.title} tone={highlight ? "brand" : "canvas"}>
+                    <IconChip inverse={highlight}>
+                      <Icon />
+                    </IconChip>
+                    <h3 className="mt-10 text-title">{reason.title}</h3>
+                    <p
+                      className={
+                        highlight
+                          ? "mt-2 text-sm text-brand-foreground/80"
+                          : "mt-2 text-sm text-muted-foreground"
+                      }
+                    >
+                      {reason.body}
+                    </p>
+                  </FolderCard>
+                );
+              })}
+            </div>
+          </Container>
+        </section>
+
+        <section aria-labelledby="features-heading" className="py-16 sm:py-24">
+          <Container className="grid gap-16 sm:gap-24">
+            <SectionIntro
+              id="features-heading"
+              eyebrow="Features"
+              title="Everything you need to keep files in order"
+              description="Folders, previews and uploads that behave the way you expect, on a phone or a big screen."
+            />
+            {FEATURES.map((feature, index) => (
+              <div
+                key={feature.title}
+                className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16"
+              >
+                <Panel
+                  glow="none"
+                  className={cn("flex justify-center", index % 2 === 1 && "lg:order-2")}
+                >
+                  {feature.picture}
+                </Panel>
+                <div className="grid gap-5 lg:px-6">
+                  <h3 className="text-title">{feature.title}</h3>
+                  <p className="text-pretty text-muted-foreground">{feature.body}</p>
+                  <ul className="grid gap-3">
+                    {feature.points.map((point) => (
+                      <li key={point} className="flex items-start gap-3 text-sm">
+                        <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </Container>
+        </section>
+
+        <section
+          id="security"
+          aria-labelledby="security-heading"
+          className="scroll-mt-20 py-16 sm:py-24"
+        >
+          <Container>
+            <Panel className="py-14 lg:py-20">
+              <div className="grid gap-12 lg:grid-cols-[2fr_3fr] lg:gap-16">
+                <div className="grid content-start gap-4">
+                  <Eyebrow>Security</Eyebrow>
+                  <h2 id="security-heading" className="text-headline text-balance">
+                    Secure by design, not by promise
+                  </h2>
+                  <p className="text-pretty text-muted-foreground">
+                    The rules about who can see what live in the database itself, and every one of
+                    them is tested. The code is open, so you can check.
+                  </p>
+                  <TextLink
+                    href={REPO}
+                    tone="brand"
+                    className="mt-2 inline-flex w-fit items-center gap-1.5"
+                  >
+                    Read the code on GitHub <ArrowRight className="size-4" aria-hidden />
+                  </TextLink>
+                </div>
+                <ul className="grid gap-4 sm:grid-cols-2">
+                  {SAFEGUARDS.map(({ icon: Icon, title, body }) => (
+                    <li
+                      key={title}
+                      className="grid content-start gap-4 rounded-2xl bg-card p-6 shadow-soft ring-1 ring-border"
+                    >
+                      <IconChip>
+                        <Icon />
+                      </IconChip>
+                      <div className="grid gap-1.5">
+                        <h3 className="font-medium">{title}</h3>
+                        <p className="text-sm text-muted-foreground">{body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Panel>
+          </Container>
+        </section>
+
+        <section aria-labelledby="start-heading" className="pt-8 pb-16 sm:pb-24">
+          <Container>
+            <Panel tone="brand" className="py-16 text-center sm:py-20">
+              <div className="mx-auto grid max-w-xl justify-items-center gap-5">
+                <h2 id="start-heading" className="text-headline text-balance">
+                  Start with 100 MB, free
+                </h2>
+                <p className="text-pretty text-brand-foreground/80">
+                  Create an account, confirm your email, and upload your first file in a minute.
+                </p>
+                <Link
+                  href="/sign-up"
+                  className={buttonVariants({ variant: "inverse", size: "xl" })}
+                >
+                  Get started free
+                  <ArrowRight data-icon="inline-end" aria-hidden />
+                </Link>
+              </div>
+            </Panel>
+          </Container>
+        </section>
       </main>
+      <SiteFooter />
     </>
+  );
+}
+
+function Hero() {
+  return (
+    <Container className="pt-2">
+      <Panel className="sm:py-16 lg:py-20">
+        <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.05fr] lg:gap-12">
+          <div className="grid justify-items-start gap-6">
+            <span className="inline-flex items-center gap-2 rounded-full bg-card py-1 pr-3 pl-1.5 text-sm shadow-soft ring-1 ring-border">
+              <span className="grid size-6 place-items-center rounded-full bg-primary-subtle text-primary-subtle-foreground">
+                <ShieldCheck className="size-3.5" aria-hidden />
+              </span>
+              Private by default
+            </span>
+            <h1 className="text-display text-balance">Your files, safe and always within reach</h1>
+            <p className="max-w-lg text-lg text-pretty text-muted-foreground">
+              Upload, organise, preview and share files from any device. Every folder stays private
+              until you choose otherwise.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/sign-up" className={buttonVariants({ size: "xl" })}>
+                Create a free account
+                <ArrowRight data-icon="inline-end" aria-hidden />
+              </Link>
+              <Link href="/sign-in" className={buttonVariants({ size: "xl", variant: "outline" })}>
+                Sign in
+              </Link>
+            </div>
+            <div className="mt-4 grid w-full max-w-md grid-cols-2 gap-4">
+              <FolderCard tone="brand">
+                <HardDrive className="size-5 opacity-80" aria-hidden />
+                <p className="mt-6 text-title whitespace-nowrap sm:text-headline">100 MB</p>
+                <p className="text-sm text-brand-foreground/80">free to start</p>
+              </FolderCard>
+              <FolderCard tone="card">
+                <Link2 className="size-5 text-primary" aria-hidden />
+                <p className="mt-6 text-title whitespace-nowrap sm:text-headline">60 s</p>
+                <p className="text-sm text-muted-foreground">until a download link expires</p>
+              </FolderCard>
+            </div>
+          </div>
+          <div className="lg:pl-4">
+            <DriveMockup />
+          </div>
+        </div>
+      </Panel>
+    </Container>
   );
 }
