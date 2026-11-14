@@ -7,6 +7,28 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-14
+
+### Added
+
+- Upload files: pick them from New → File upload, or drop them anywhere on a folder. Three upload at a time, with progress, cancel and retry, and the uploads panel stays while you move between folders.
+- Files go straight from the browser to storage, never through the app, so uploads up to 25 MB stay fast.
+- A file with a name that's already taken is saved as "name (1).ext" instead of failing.
+- Download any file you can see.
+- Profile pictures (PNG, JPEG, WebP or GIF up to 2 MB), shown in the account menu.
+- A daily clean-up that removes uploads abandoned for a day and stored files nothing points at.
+
+### Changed
+
+- "New folder" moved into a New menu, next to File upload.
+
+### Security
+
+- Upload links are signed for one file, of one exact size and type, for 5 minutes; storage refuses anything else. Download links last 60 seconds and are only signed after the database confirms you can see the file.
+- The 25 MB limit and the 100 MB quota are enforced by the database when an upload starts, so parallel uploads can't squeeze past them. When an upload finishes, the app checks storage holds exactly the bytes that were reserved, and the database checks again that you can still add files to the folder and that it isn't in the trash.
+- Files that could run script in a browser (HTML, SVG, XML) are always downloaded, never shown, and text is only ever shown as plain text.
+- Profile pictures can only point inside the person's own picture folder, never at someone's files or at an outside address (the unused `avatar_url` column was removed).
+
 ## [0.4.0] - 2026-11-14
 
 ### Added
