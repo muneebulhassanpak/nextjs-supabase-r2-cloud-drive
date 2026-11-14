@@ -66,6 +66,7 @@ declare
   v_uid uuid := private.current_user_id();
   v_item public.items;
   v_parent_id uuid;
+  v_parent_trashed boolean;
   v_name text;
 begin
   perform private.require_access(p_item_id, 'editor');
@@ -83,26 +84,47 @@ begin
     raise exception 'Only the owner can restore this' using errcode = '42501';
   end if;
 
+  -- Back into its folder, unless that folder is in the trash or the caller can no longer add to it
+  -- (their share was removed). Then it goes to the top of the owner's drive instead, but only when
+  -- the caller owns all of it: nobody else's files end up in a stranger's drive.
   v_parent_id := v_item.parent_id;
-  if v_parent_id is not null
-     and exists (select 1 from public.items i where i.id = v_parent_id and i.trashed_at is not null) then
-    if exists (
-      select 1 from public.items d
-      where (d.id = p_item_id or d.ancestors @> array[p_item_id]) and d.owner_id <> v_uid
-    ) then
-      raise exception 'The folder it was in is in the trash' using errcode = 'LK409';
+  if v_parent_id is not null then
+    v_parent_trashed := exists (
+      select 1 from public.items i where i.id = v_parent_id and i.trashed_at is not null
+    );
+    if v_parent_trashed or coalesce(private.item_access(v_parent_id), 'viewer') < 'editor' then
+      if exists (
+        select 1 from public.items d
+        where (d.id = p_item_id or d.ancestors @> array[p_item_id]) and d.owner_id <> v_uid
+      ) then
+        if v_parent_trashed then
+          raise exception 'The folder it was in is in the trash' using errcode = 'LK409';
+        end if;
+        raise exception 'You can no longer add to the folder it was in' using errcode = '42501';
+      end if;
+      v_parent_id := null;
     end if;
-    v_parent_id := null;
   end if;
 
   -- Rename and move it while it's still in the trash (where names don't count), then bring it back.
-  v_name := private.free_name(v_parent_id, v_item.owner_id, v_item.name);
-  update public.items i
-  set parent_id = v_parent_id, name = v_name
-  where i.id = p_item_id and (i.parent_id is distinct from v_parent_id or i.name <> v_name);
-  update public.items i
-  set trashed_at = null, trashed_by = null, trash_root = null
-  where i.trash_root = p_item_id;
+  -- The top of a drive has no tree lock, so a new item there can take the free name first: then the
+  -- unique index refuses, and the next free name is tried.
+  for v_attempt in 1..3 loop
+    begin
+      v_name := private.free_name(v_parent_id, v_item.owner_id, v_item.name);
+      update public.items i
+      set parent_id = v_parent_id, name = v_name
+      where i.id = p_item_id and (i.parent_id is distinct from v_parent_id or i.name <> v_name);
+      update public.items i
+      set trashed_at = null, trashed_by = null, trash_root = null
+      where i.trash_root = p_item_id;
+      exit;
+    exception when unique_violation then
+      if v_attempt = 3 then
+        raise;
+      end if;
+    end;
+  end loop;
 
   return query select v_name, v_parent_id;
 end;
