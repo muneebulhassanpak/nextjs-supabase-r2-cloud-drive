@@ -91,6 +91,24 @@ test("files over 25 MB and over the quota are refused with a reason", async ({ p
   await expect(row(page, "too-much.txt")).toBeHidden();
 });
 
+test("a long file name wraps in the details panel instead of widening the page", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "the details panel is a sheet on phones");
+  await signInAsNewUser(page);
+  const name = `${"A very long file name that keeps going ".repeat(4).trim()}.md`;
+  await chooseFiles(page, [text(name, "# notes")]);
+  await row(page, name).click();
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  const panel = page.getByRole("complementary", { name: "Details" });
+  await expect(panel.getByRole("heading", { name })).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(0);
+});
+
 test("drop files onto a folder to upload them there", async ({ page, isMobile }) => {
   test.skip(isMobile, "dragging files in is a desktop feature");
   await signInAsNewUser(page);
