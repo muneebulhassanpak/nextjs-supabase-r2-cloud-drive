@@ -15,3 +15,6 @@ export const itemNameSchema = z
     message: "Names can't contain control characters.",
   })
   .refine((name) => name !== "." && name !== "..", { message: "That name is reserved." });
+
+/** Most items one trash request takes; the browser sends bigger selections in batches. */
+export const TRASH_BATCH_SIZE = 100;
