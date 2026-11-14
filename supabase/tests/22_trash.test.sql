@@ -2,7 +2,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(35);
+select plan(46);
 
 -- Trash ------------------------------------------------------------------------------------------------
 
@@ -50,8 +50,10 @@ select throws_ok(format('select public.move_item(%L, %L)', tests.id('R'), tests.
 select tests.authenticate_as('owner');
 select throws_ok(format('select public.restore_item(%L)', tests.id('f4')), 'LK409', 'Restore the folder it was in instead',
   'an item trashed with its folder comes back with the folder');
+select tests.authenticate_as('editor');
 select throws_ok(format('select public.restore_item(%L)', tests.id('f2')), 'LK409', 'The folder it was in is in the trash',
-  'an item cannot come back into a trashed folder');
+  'an editor cannot bring the owner''s file back to the top of a drive when its folder is in the trash');
+select tests.authenticate_as('owner');
 select throws_ok(format('select public.restore_item(%L)', tests.id('f1')), 'LK409', 'This isn''t in the trash',
   'restoring something not in the trash is refused');
 select tests.authenticate_as('viewer');
@@ -73,8 +75,10 @@ select ok(
 select tests.clear_authentication();
 select tests.new_file('dup', 'owner', 'F', 'old.pdf');
 select tests.authenticate_as('owner');
-select throws_ok(format('select public.restore_item(%L)', tests.id('t1')), '23505', null,
-  'restoring onto a name now taken is refused');
+select is(
+  tests.rows(format($$select r.name || ' in ' || tests.label(r.parent_id) from public.restore_item(%L) r$$, tests.id('t1'))),
+  '{old (1).pdf in F}',
+  'restoring onto a name taken meanwhile gives it a number, and says so');
 
 -- Delete forever --------------------------------------------------------------------------------------
 
@@ -136,6 +140,59 @@ select is(
   'the owner''s file is back at the top of the owner''s drive, in their trash, ready to restore');
 select tests.authenticate_as('owner');
 select lives_ok(format('select public.restore_item(%L)', tests.id('g1')), 'and the owner restores it');
+
+-- Restoring when the folder it was in is in the trash too ---------------------------------------------
+
+select tests.clear_authentication();
+select tests.new_folder('H', 'owner', null, 'Clients');
+select tests.new_folder('H2', 'owner', 'H', 'Acme');
+select tests.new_file('h1', 'owner', 'H2', 'brief.pdf');
+select tests.new_file('h2', 'owner', 'H', 'brief.pdf');
+select tests.new_file('top', 'owner', null, 'brief.pdf');
+select tests.new_file('h3', 'owner', 'H', 'shared-notes.md', p_mime_type => 'text/markdown');
+insert into public.item_shares (item_id, user_id, role, created_by)
+values (tests.id('H'), tests.id('editor'), 'editor', tests.id('owner'));
+select tests.new_file('eh', 'editor', 'H2', 'editor.txt', p_mime_type => 'text/plain');
+select tests.authenticate_as('owner');
+select public.trash_item(tests.id('h2'));
+select public.trash_item(tests.id('H'));
+select is(
+  tests.rows(format($$select r.name || ' in ' || coalesce(tests.label(r.parent_id), 'My Drive') from public.restore_item(%L) r$$, tests.id('h2'))),
+  '{brief (1).pdf in My Drive}',
+  'with its folder in the trash, it goes to the top of the owner''s drive, under a free name');
+select throws_ok(format('select public.restore_item(%L)', tests.id('H2')), 'LK409', 'Restore the folder it was in instead',
+  'a folder trashed with its parent still comes back only with it');
+select public.restore_item(tests.id('H'));
+select public.trash_item(tests.id('H2'));
+select public.trash_item(tests.id('H'));
+select throws_ok(format('select public.restore_item(%L)', tests.id('H2')), 'LK409', 'The folder it was in is in the trash',
+  'the owner cannot take someone else''s file out of the shared tree by restoring the folder it''s in');
+select tests.clear_authentication();
+delete from public.items where id = tests.id('eh');
+select tests.authenticate_as('owner');
+select is(
+  tests.rows(format($$select r.name || ' in ' || coalesce(tests.label(r.parent_id), 'My Drive') from public.restore_item(%L) r$$, tests.id('H2'))),
+  '{Acme in My Drive}',
+  'once everything in it is theirs, it comes back to the top of their drive');
+select is(
+  tests.rows($$select tests.label(id) || ':' || cardinality(ancestors) || ':' || (trashed_at is null) from public.items
+    where id in (tests.id('H2'), tests.id('h1'))$$),
+  tests.sorted('{H2:0:true,h1:1:true}'),
+  'with everything inside it, paths rewritten');
+
+-- Names for copies --------------------------------------------------------------------------------------
+
+select tests.clear_authentication();
+select is(private.free_name(null, tests.id('owner'), 'brief.pdf'), 'brief (2).pdf', 'the next free number');
+select is(private.free_name(null, tests.id('owner'), 'BRIEF.PDF'), 'BRIEF (2).PDF', 'names clash ignoring case');
+select is(private.free_name(null, tests.id('owner'), 'fresh.pdf'), 'fresh.pdf', 'a free name stays as it is');
+select tests.new_file('dot', 'owner', null, '.env', p_mime_type => 'text/plain');
+select tests.new_file('tgz', 'owner', null, 'site.tar.gz', p_mime_type => 'application/gzip');
+select is(private.free_name(null, tests.id('owner'), '.env'), '.env (1)', 'a leading dot is not an extension');
+select is(private.free_name(null, tests.id('owner'), 'site.tar.gz'), 'site.tar (1).gz', 'the number goes before the last extension');
+select tests.new_file('long', 'owner', null, repeat('a', 251) || '.pdf');
+select is(private.free_name(null, tests.id('owner'), repeat('a', 251) || '.pdf'), repeat('a', 247) || ' (1).pdf',
+  'a long name loses the end of its base so the copy still fits');
 
 select * from finish();
 rollback;
