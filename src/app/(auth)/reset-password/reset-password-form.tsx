@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { Field, FormError, SubmitButton } from "@/components/form";
+import { FormError, PasswordField, SubmitButton } from "@/components/form";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/schemas";
 
 import { setNewPassword } from "../actions";
@@ -13,20 +13,20 @@ export function ResetPasswordForm() {
   return (
     <form action={action} className="grid gap-4" noValidate>
       <FormError message={failed?.error.fieldErrors ? undefined : failed?.error.message} />
-      <Field
+      <PasswordField
+        inputSize="lg"
         label="New password"
         name="password"
-        type="password"
         autoComplete="new-password"
         required
         minLength={PASSWORD_MIN_LENGTH}
         hint={`At least ${PASSWORD_MIN_LENGTH} characters, with letters and numbers.`}
         errors={failed?.error.fieldErrors?.password}
       />
-      <Field
+      <PasswordField
+        inputSize="lg"
         label="Confirm new password"
         name="confirmPassword"
-        type="password"
         autoComplete="new-password"
         required
         errors={failed?.error.fieldErrors?.confirmPassword}
