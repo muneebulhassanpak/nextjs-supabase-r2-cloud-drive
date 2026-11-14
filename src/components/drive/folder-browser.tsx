@@ -1,6 +1,18 @@
 "use client";
 
-import { ArrowUpDown, FolderPlus, Info, LayoutGrid, List, Plus, Upload } from "lucide-react";
+import {
+  ArrowUpDown,
+  Clock,
+  FolderPlus,
+  Info,
+  LayoutGrid,
+  List,
+  Plus,
+  Star,
+  Trash2,
+  Upload,
+  type LucideIcon,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   startTransition,
@@ -9,6 +21,7 @@ import {
   useOptimistic,
   useRef,
   useState,
+  useSyncExternalStore,
   type DragEvent,
   type KeyboardEvent,
   type MouseEvent,
@@ -16,9 +29,29 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { createFolder, renameItem, setDriveView, trashItems } from "@/app/drive/item-actions";
+import {
+  createFolder,
+  deleteItemsForever,
+  emptyMyTrash,
+  moveItems,
+  renameItem,
+  restoreItems,
+  setDriveView,
+  setStarred,
+  trashItems,
+} from "@/app/drive/item-actions";
 import { EmptyState } from "@/components/app/empty-state";
 import { FilePreview } from "@/components/preview/file-preview";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -48,23 +81,28 @@ import {
 } from "@/components/ui/sheet";
 import { useUploads } from "@/components/uploads/upload-provider";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { TRASH_BATCH_SIZE } from "@/lib/drive/names";
+import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
+import { groupByOpened } from "@/lib/drive/recent";
 import { sortItems, type Sort, type SortKey } from "@/lib/drive/sort";
 import type { Crumb, DriveItem, DriveView } from "@/lib/drive/types";
 import { download } from "@/lib/files/api";
 import { cn } from "@/lib/utils";
+import type { ActionResult } from "@/server/errors";
 
 import { Breadcrumbs } from "./breadcrumbs";
 import { DetailsPanel } from "./details-panel";
-import { actionsFor, type ItemAction } from "./item-actions";
+import { actionsFor, type BrowserMode, type ItemAction } from "./item-actions";
 import { ItemIcon } from "./item-icon";
 import { GridView, ListView } from "./item-views";
+import { MoveDialog, type Destination } from "./move-dialog";
 import { NameDialog } from "./name-dialog";
+import { useItemDrag } from "./use-item-drag";
 
 type Change =
   | { type: "add"; item: DriveItem }
   | { type: "rename"; id: string; name: string }
-  | { type: "remove"; ids: string[] };
+  | { type: "remove"; ids: string[] }
+  | { type: "star"; ids: string[]; starred: boolean };
 
 function applyChange(items: DriveItem[], change: Change): DriveItem[] {
   switch (change.type) {
@@ -74,6 +112,10 @@ function applyChange(items: DriveItem[], change: Change): DriveItem[] {
       return items.map((item) => (item.id === change.id ? { ...item, name: change.name } : item));
     case "remove":
       return items.filter((item) => !change.ids.includes(item.id));
+    case "star":
+      return items.map((item) =>
+        change.ids.includes(item.id) ? { ...item, starred: change.starred } : item,
+      );
   }
 }
 
@@ -84,15 +126,68 @@ const SORT_LABELS: Record<SortKey, string> = {
 };
 const TEMP_PREFIX = "pending-";
 
+/** The sidebar collections: their title, and what shows when they're empty. */
+const COLLECTIONS: Record<
+  Exclude<BrowserMode, "folder">,
+  { title: string; icon: LucideIcon; empty: string; emptyText: string }
+> = {
+  starred: {
+    title: "Starred",
+    icon: Star,
+    empty: "No starred files",
+    emptyText: "Star the files and folders you use most to find them quickly.",
+  },
+  recent: {
+    title: "Recent",
+    icon: Clock,
+    empty: "No recent files",
+    emptyText: "Files you open show up here, newest first.",
+  },
+  trash: {
+    title: "Trash",
+    icon: Trash2,
+    empty: "Trash is empty",
+    emptyText: "Items you delete stay here for 30 days, then they're removed for good.",
+  },
+};
+
+const DATE_COLUMNS = {
+  recent: { label: "Opened", value: (item: DriveItem) => item.openedAt },
+  trash: { label: "Trashed", value: (item: DriveItem) => item.trashedAt },
+};
+
+/**
+ * Sends ids in batches the server accepts, one batch after another. Every batch is sent, as the
+ * server carries on past a failed item within a batch: what happens to an item doesn't depend on
+ * which batch it fell in. Returns what the batches gave back, and the first problem.
+ */
+async function inBatches<T>(
+  ids: string[],
+  send: (batch: string[]) => Promise<ActionResult<T>>,
+): Promise<{ data: T[]; error?: string }> {
+  const data: T[] = [];
+  let error: string | undefined;
+  for (let start = 0; start < ids.length; start += ITEMS_PER_REQUEST) {
+    const result = await send(ids.slice(start, start + ITEMS_PER_REQUEST));
+    if (result.ok) data.push(result.data);
+    else error ??= result.error.message;
+  }
+  return error === undefined ? { data } : { data, error };
+}
+
+const subscribeNever = () => () => undefined;
+
 export interface FolderBrowserProps {
-  /** null at the top of My Drive. */
+  /** A folder (the default), or one of the collections: Starred, Recent, Trash. */
+  mode?: BrowserMode;
+  /** null at the top of My Drive, and in collections. */
   folder: { id: string; name: string } | null;
   items: DriveItem[];
   crumbs: Crumb[];
   sharedRoot: boolean;
   sort: Sort;
   view: DriveView | null;
-  /** Whether the person may add, rename and trash things here. */
+  /** Whether the person may add, rename, move and trash things here (folders only). */
   canEdit: boolean;
   currentUserId: string;
 }
@@ -102,14 +197,30 @@ export interface FolderBrowserProps {
  * (optimistic) and roll back with a message if the server refuses them.
  */
 export function FolderBrowser(props: FolderBrowserProps) {
-  const { folder, canEdit, currentUserId, sort } = props;
+  const { folder, currentUserId, sort, mode = "folder" } = props;
+  const canEdit = mode === "folder" && props.canEdit;
+  const collection = mode === "folder" ? null : COLLECTIONS[mode];
   const router = useRouter();
   const pathname = usePathname();
   const isTouch = useMediaQuery("(pointer: coarse)");
   const isWide = useMediaQuery("(min-width: 1024px)");
 
   const [items, change] = useOptimistic(props.items, applyChange);
-  const sorted = useMemo(() => sortItems(items, sort), [items, sort]);
+  // Recent and Trash keep the server's order: newest first.
+  const sorted = useMemo(
+    () => (mode === "recent" || mode === "trash" ? items : sortItems(items, sort)),
+    [items, sort, mode],
+  );
+  // Grouping by day needs the viewer's clock and time zone, so it starts after hydration.
+  const hydrated = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+  const groups = useMemo(
+    () => (mode === "recent" && hydrated ? groupByOpened(sorted, new Date()) : undefined),
+    [mode, hydrated, sorted],
+  );
   const pending = useMemo(
     () => new Set(items.filter((i) => i.id.startsWith(TEMP_PREFIX)).map((i) => i.id)),
     [items],
@@ -121,6 +232,10 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const [anchorId, setAnchorId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<
     { kind: "new" } | { kind: "rename"; item: DriveItem } | null
+  >(null);
+  const [moving, setMoving] = useState<DriveItem[]>([]);
+  const [confirm, setConfirm] = useState<
+    { kind: "delete"; items: DriveItem[] } | { kind: "empty" } | null
   >(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -144,6 +259,8 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const selectedSet = new Set(selected.map((item) => item.id));
   const detailsItem = selected.length === 1 ? (selected[0] ?? null) : null;
   const location = folder?.name ?? (props.sharedRoot ? "Shared with me" : "My Drive");
+  const context = { mode, canEdit, currentUserId };
+  const owned = items.filter((item) => item.owner.id === currentUserId);
 
   // Changes ------------------------------------------------------------------------------------
 
@@ -162,6 +279,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
           updatedAt: new Date().toISOString(),
           parentId: folder?.id ?? null,
           owner: { id: currentUserId, name: null, email: null },
+          starred: false,
         },
       });
       const result = await createFolder(folder?.id ?? null, name);
@@ -184,19 +302,139 @@ export function FolderBrowser(props: FolderBrowserProps) {
     setSelectedIds(new Set());
     startTransition(async () => {
       change({ type: "remove", ids });
-      // The server takes a limited number per request; stop at the first batch that fails.
-      for (let start = 0; start < ids.length; start += TRASH_BATCH_SIZE) {
-        const result = await trashItems(ids.slice(start, start + TRASH_BATCH_SIZE));
-        if (!result.ok) {
-          toast.error(result.error.message);
-          return;
-        }
+      const { error } = await inBatches(ids, trashItems);
+      if (error) {
+        toast.error(error);
+        return;
       }
       toast.success(
         ids.length === 1
-          ? `“${targets[0]?.name}” moved to the trash`
-          : `${ids.length} items moved to the trash`,
+          ? `“${targets[0]?.name ?? ""}” moved to the trash`
+          : `${String(ids.length)} items moved to the trash`,
+        {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              undoTrash(ids);
+            },
+          },
+        },
       );
+    });
+  }
+
+  function undoTrash(ids: string[]) {
+    startTransition(async () => {
+      const { error } = await inBatches(ids, restoreItems);
+      if (error) toast.error(error);
+    });
+  }
+
+  function move(targets: DriveItem[], destination: Destination) {
+    const ids = targets.map((item) => item.id).filter((id) => id !== destination.id);
+    setMoving([]);
+    if (ids.length === 0 || destination.id === (folder?.id ?? null)) return;
+    const names = Object.fromEntries(targets.map((item) => [item.id, item.name]));
+    setSelectedIds(new Set());
+    startTransition(async () => {
+      change({ type: "remove", ids });
+      const { error } = await inBatches(ids, (batch) => moveItems(batch, destination.id, names));
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      toast.success(
+        ids.length === 1
+          ? `Moved “${names[ids[0] ?? ""] ?? ""}” to ${destination.name}`
+          : `Moved ${String(ids.length)} items to ${destination.name}`,
+        {
+          action: {
+            label: "Open",
+            onClick: () => {
+              router.push(destination.id ? `/drive/folders/${destination.id}` : "/drive");
+            },
+          },
+        },
+      );
+    });
+  }
+
+  function star(targets: DriveItem[], starred: boolean) {
+    const ids = targets.map((item) => item.id);
+    startTransition(async () => {
+      // Unstarring on the Starred page takes it off the page.
+      change(
+        mode === "starred" && !starred ? { type: "remove", ids } : { type: "star", ids, starred },
+      );
+      const { error } = await inBatches(ids, (batch) => setStarred(batch, starred));
+      if (error) toast.error(error);
+    });
+  }
+
+  function restore(targets: DriveItem[]) {
+    const ids = targets.map((item) => item.id);
+    setSelectedIds(new Set());
+    startTransition(async () => {
+      change({ type: "remove", ids });
+      const { data, error } = await inBatches(ids, restoreItems);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      const restored = data.flatMap((batch) => batch.restored);
+      const [first] = restored;
+      const original = targets.find((item) => item.id === first?.id);
+      if (!first || !original || restored.length > 1) {
+        toast.success(`Restored ${String(restored.length)} items`);
+        return;
+      }
+      // Say where it went if that isn't its old folder, and its new name if it got one.
+      const toMyDrive = first.parentId === null && original.parentId !== null;
+      const renamed = first.name !== original.name;
+      toast.success(
+        `Restored “${first.name}”${toMyDrive ? " to My Drive" : ""}${
+          renamed ? `, renamed from “${original.name}”` : ""
+        }`,
+        {
+          action: {
+            label: "Show",
+            onClick: () => {
+              router.push(first.parentId ? `/drive/folders/${first.parentId}` : "/drive");
+            },
+          },
+        },
+      );
+    });
+  }
+
+  function deleteForever(targets: DriveItem[]) {
+    const ids = targets.map((item) => item.id);
+    setConfirm(null);
+    setSelectedIds(new Set());
+    startTransition(async () => {
+      change({ type: "remove", ids });
+      const { error } = await inBatches(ids, deleteItemsForever);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      toast.success(
+        ids.length === 1
+          ? `“${targets[0]?.name ?? ""}” deleted forever`
+          : `${String(ids.length)} items deleted forever`,
+      );
+    });
+  }
+
+  function emptyTrash() {
+    setConfirm(null);
+    setSelectedIds(new Set());
+    startTransition(async () => {
+      // Only what's theirs goes; what they trashed from others' folders stays for its owner.
+      change({ type: "remove", ids: owned.map((item) => item.id) });
+      const result = await emptyMyTrash();
+      if (result.ok) toast.success("Trash emptied");
+      else toast.error(result.error.message);
     });
   }
 
@@ -251,7 +489,8 @@ export function FolderBrowser(props: FolderBrowserProps) {
   // Selection and opening ----------------------------------------------------------------------
 
   function open(item: DriveItem) {
-    if (item.kind === "folder") router.push(`/drive/folders/${item.id}`);
+    if (mode === "trash") toast.info("Restore it to open it.");
+    else if (item.kind === "folder") router.push(`/drive/folders/${item.id}`);
     else setPreviewId(item.id);
   }
 
@@ -286,6 +525,10 @@ export function FolderBrowser(props: FolderBrowserProps) {
   function run(action: ItemAction["id"], targets: DriveItem[]) {
     const [first] = targets;
     if (action === "trash") trash(targets);
+    else if (action === "move") setMoving(targets);
+    else if (action === "star" || action === "unstar") star(targets, action === "star");
+    else if (action === "restore") restore(targets);
+    else if (action === "delete") setConfirm({ kind: "delete", items: targets });
     else if (first && action === "open") open(first);
     else if (first && action === "download") downloadFile(first);
     else if (first && action === "rename") setDialog({ kind: "rename", item: first });
@@ -316,13 +559,13 @@ export function FolderBrowser(props: FolderBrowserProps) {
     else if (mod && event.key.toLowerCase() === "a") {
       event.preventDefault();
       setSelectedIds(new Set(sorted.filter((i) => !pending.has(i.id)).map((i) => i.id)));
-    } else if (
-      (event.key === "Delete" || event.key === "Backspace") &&
-      canEdit &&
-      selected.length
-    ) {
-      event.preventDefault();
-      trash(selected);
+    } else if ((event.key === "Delete" || event.key === "Backspace") && selected.length) {
+      // The same as the menu's destructive action: trash here, delete forever in the Trash.
+      const destructive = actionsFor(selected, context).find((action) => action.destructive);
+      if (destructive) {
+        event.preventDefault();
+        run(destructive.id, selected);
+      }
     } else if (event.key === "F2" && canEdit && selected.length === 1 && selected[0]) {
       event.preventDefault();
       setDialog({ kind: "rename", item: selected[0] });
@@ -340,7 +583,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     >
       <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
       <ContextMenuContent className="w-56">
-        {actionsFor(targetsFor(item), canEdit).map((action) => (
+        {actionsFor(targetsFor(item), context).map((action) => (
           <MenuEntry
             key={action.id}
             action={action}
@@ -368,7 +611,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          {actionsFor(targetsFor(item), canEdit).map((action) => (
+          {actionsFor(targetsFor(item), context).map((action) => (
             <MenuEntry
               key={action.id}
               action={action}
@@ -382,11 +625,25 @@ export function FolderBrowser(props: FolderBrowserProps) {
       </DropdownMenu>
     );
 
+  // Moving by dragging: in folders people can edit, with a mouse (phones use "Move to…").
+  const drag = useItemDrag({
+    enabled: canEdit && !isTouch,
+    selected,
+    select: (item) => {
+      setSelectedIds(new Set([item.id]));
+      setAnchorId(item.id);
+    },
+    onMove: move,
+  });
+
   const viewProps = {
     items: sorted,
     selected: selectedSet,
     pending,
     currentUserId,
+    groups,
+    ...(mode !== "folder" && mode !== "starred" && { dateColumn: DATE_COLUMNS[mode] }),
+    itemProps: (item: DriveItem) => drag.itemProps(item, pending.has(item.id)),
     onOpen: open,
     onKeyDown: onItemKeyDown,
     onClick: (event: MouseEvent, item: DriveItem) => {
@@ -401,7 +658,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     <DetailsPanel
       item={detailsItem}
       selectedCount={selected.length}
-      location={location}
+      location={mode === "folder" ? location : undefined}
       currentUserId={currentUserId}
       onClose={() => {
         setDetailsOpen(false);
@@ -435,11 +692,20 @@ export function FolderBrowser(props: FolderBrowserProps) {
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Breadcrumbs
-            crumbs={props.crumbs}
-            current={folder?.name ?? null}
-            sharedRoot={props.sharedRoot}
-          />
+          {collection ? (
+            <h1 className="px-1.5 py-1 text-xl font-semibold tracking-tight sm:text-2xl">
+              {collection.title}
+            </h1>
+          ) : (
+            <Breadcrumbs
+              crumbs={props.crumbs}
+              current={folder?.name ?? null}
+              sharedRoot={props.sharedRoot}
+              // Every folder above is theirs only in their own drive; in a shared one, an upper folder
+              // may be view-only, so its crumb takes no drops (Move to… checks each folder).
+              {...(canEdit && !isTouch && !props.sharedRoot && { dropTarget: drag.dropTarget })}
+            />
+          )}
           <div className="flex items-center gap-1">
             {canEdit && (
               <>
@@ -483,51 +749,65 @@ export function FolderBrowser(props: FolderBrowserProps) {
                 />
               </>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <ArrowUpDown />
-                  <span className="sr-only">Sort by {SORT_LABELS[sort.key]}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                <DropdownMenuRadioGroup
-                  value={sort.key}
-                  onValueChange={(key) => {
-                    changeSort({ key: key as SortKey, order: key === "name" ? "asc" : "desc" });
-                  }}
-                >
-                  {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
-                    <DropdownMenuRadioItem key={key} value={key}>
-                      {SORT_LABELS[key]}
+            {mode === "trash" && owned.length > 0 && (
+              <Button
+                variant="outline"
+                className="mr-1"
+                onClick={() => {
+                  setConfirm({ kind: "empty" });
+                }}
+              >
+                <Trash2 />
+                Empty trash
+              </Button>
+            )}
+            {(mode === "folder" || mode === "starred") && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <ArrowUpDown />
+                    <span className="sr-only">Sort by {SORT_LABELS[sort.key]}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={sort.key}
+                    onValueChange={(key) => {
+                      changeSort({ key: key as SortKey, order: key === "name" ? "asc" : "desc" });
+                    }}
+                  >
+                    {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                      <DropdownMenuRadioItem key={key} value={key}>
+                        {SORT_LABELS[key]}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={sort.order}
+                    onValueChange={(order) => {
+                      changeSort({ key: sort.key, order: order as Sort["order"] });
+                    }}
+                  >
+                    <DropdownMenuRadioItem value="asc">
+                      {sort.key === "name"
+                        ? "A to Z"
+                        : sort.key === "size"
+                          ? "Smallest first"
+                          : "Oldest first"}
                     </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioGroup
-                  value={sort.order}
-                  onValueChange={(order) => {
-                    changeSort({ key: sort.key, order: order as Sort["order"] });
-                  }}
-                >
-                  <DropdownMenuRadioItem value="asc">
-                    {sort.key === "name"
-                      ? "A to Z"
-                      : sort.key === "size"
-                        ? "Smallest first"
-                        : "Oldest first"}
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="desc">
-                    {sort.key === "name"
-                      ? "Z to A"
-                      : sort.key === "size"
-                        ? "Largest first"
-                        : "Newest first"}
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <DropdownMenuRadioItem value="desc">
+                      {sort.key === "name"
+                        ? "Z to A"
+                        : sort.key === "size"
+                          ? "Largest first"
+                          : "Newest first"}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -560,7 +840,16 @@ export function FolderBrowser(props: FolderBrowserProps) {
             if (event.target === event.currentTarget) setSelectedIds(new Set());
           }}
         >
-          {sorted.length === 0 ? (
+          {mode === "trash" && sorted.length > 0 && (
+            <p className="mb-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+              Items in the trash are deleted forever after 30 days.
+            </p>
+          )}
+          {sorted.length === 0 && collection ? (
+            <EmptyState icon={collection.icon} title={collection.empty}>
+              {collection.emptyText}
+            </EmptyState>
+          ) : sorted.length === 0 ? (
             <EmptyState
               icon={FolderPlus}
               title={folder ? "This folder is empty" : "Your drive is empty"}
@@ -624,7 +913,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
           </SheetHeader>
           <div className="grid px-2">
             {sheetItem &&
-              actionsFor([sheetItem], canEdit).map((action) => (
+              actionsFor([sheetItem], context).map((action) => (
                 <button
                   key={action.id}
                   type="button"
@@ -674,6 +963,55 @@ export function FolderBrowser(props: FolderBrowserProps) {
           if (dialog?.kind === "rename") rename(dialog.item, name);
         }}
       />
+      <MoveDialog
+        items={moving}
+        from={folder?.id ?? null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setMoving([]);
+        }}
+        onMove={(destination) => {
+          move(moving, destination);
+        }}
+      />
+      <AlertDialog
+        open={confirm !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.kind === "empty"
+                ? "Empty the trash?"
+                : confirm?.items.length === 1
+                  ? `Delete “${confirm.items[0]?.name ?? ""}” forever?`
+                  : `Delete ${String(confirm?.items.length ?? 0)} items forever?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.kind === "empty"
+                ? "Everything of yours in the trash will be deleted for good. This can't be undone."
+                : `${confirm?.items.length === 1 ? "It" : "They"} will be deleted for good${
+                    confirm?.items.some((item) => item.kind === "folder")
+                      ? ", with everything inside"
+                      : ""
+                  }. This can't be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (confirm?.kind === "empty") emptyTrash();
+                else if (confirm) deleteForever(confirm.items);
+              }}
+            >
+              {confirm?.kind === "empty" ? "Empty trash" : "Delete forever"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -22,6 +22,7 @@
   --color-file-presentation: var(--file-presentation);
   --color-file-text: var(--file-text);
   --color-file-archive: var(--file-archive);
+  --color-star: var(--star);
   --shadow-soft: var(--elevation-1);
   --shadow-float: var(--elevation-2);
 
@@ -160,6 +161,7 @@
   --file-presentation: oklch(0.68 0.18 45);
   --file-text: oklch(0.55 0.03 260);
   --file-archive: oklch(0.7 0.14 85);
+  --star: oklch(0.77 0.16 75);
   --chart-1: oklch(0.54 0.22 285);
   --chart-2: oklch(0.6 0.17 255);
   --chart-3: oklch(0.64 0.2 15);
@@ -213,6 +215,7 @@
   --file-presentation: oklch(0.76 0.15 50);
   --file-text: oklch(0.72 0.03 260);
   --file-archive: oklch(0.8 0.13 85);
+  --star: oklch(0.82 0.15 80);
   --chart-1: oklch(0.7 0.17 285);
   --chart-2: oklch(0.72 0.14 255);
   --chart-3: oklch(0.72 0.17 15);

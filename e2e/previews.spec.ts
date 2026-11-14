@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { newUser } from "../tests/support/local-stack";
+import { signInAsNewUser } from "./support";
 
 // Opening files: the right viewer for each type, stepping through a folder with the arrow keys,
 // and script-capable files shown only as source.
@@ -20,18 +20,11 @@ const TYPES: Record<string, string> = {
   "tone.wav": "audio/wav",
 };
 
-const field = (page: Page, label: string) =>
-  page.getByLabel(label, { exact: true }).filter({ visible: true });
 const row = (page: Page, name: string) =>
   page.getByRole("row", { name, exact: true }).filter({ visible: true });
 
 test.beforeEach(async ({ page }) => {
-  const user = await newUser("e2e-previews");
-  await page.goto("/sign-in");
-  await field(page, "Email").fill(user.email);
-  await field(page, "Password").fill(user.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "My Drive" })).toBeVisible();
+  await signInAsNewUser(page, "e2e-previews");
 
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "New", exact: true }).click();
@@ -46,8 +39,10 @@ test.beforeEach(async ({ page }) => {
       buffer: readFileSync(join(FIXTURES, name)),
     })),
   );
+  // Eight files and their thumbnails: slower than one, more so with every worker uploading.
   await expect(page.getByRole("region", { name: "Uploads" }).getByRole("heading")).toHaveText(
     "8 uploads complete",
+    { timeout: 15_000 },
   );
   await expect(row(page, "tone.wav")).toBeVisible();
   // Out of the way of the files' menus.

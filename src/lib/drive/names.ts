@@ -16,5 +16,5 @@ export const itemNameSchema = z
   })
   .refine((name) => name !== "." && name !== "..", { message: "That name is reserved." });
 
-/** Most items one trash request takes; the browser sends bigger selections in batches. */
-export const TRASH_BATCH_SIZE = 100;
+/** Most items one request (trash, move, star, restore…) takes; the browser sends more in batches. */
+export const ITEMS_PER_REQUEST = 100;

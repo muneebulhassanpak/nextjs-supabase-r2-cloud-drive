@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { LANDING_TIMEOUT } from "./support";
 import {
   confirmLink,
   latestEmail,
@@ -49,7 +50,9 @@ test("sign up, confirm by email, sign out, and sign back in", async ({ page }) =
 
   await openEmailLink(page, email, "Confirm your Lockerly account");
   await expect(page).toHaveURL(/\/drive$/);
-  await expect(page.getByRole("heading", { name: "My Drive" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My Drive" })).toBeVisible({
+    timeout: LANDING_TIMEOUT,
+  });
 
   await openAccountMenu(page);
   await expect(page.getByRole("menu")).toContainText("Ada Lovelace");

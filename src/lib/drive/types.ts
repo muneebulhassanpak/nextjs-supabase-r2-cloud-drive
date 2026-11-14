@@ -17,10 +17,27 @@ export interface DriveItem {
   updatedAt: string;
   parentId: string | null;
   owner: { id: string; name: string | null; email: string | null };
+  /** Whether the signed-in person starred it. */
+  starred: boolean;
+  /** When they last opened it (Recent only). */
+  openedAt?: string;
+  /** When it went to the trash (Trash only). */
+  trashedAt?: string;
 }
 
 /** A folder above the current one, for the breadcrumbs. */
 export interface Crumb {
   id: string;
   name: string;
+}
+
+/** One step of the "Move to" picker: a folder and the folders inside it. */
+export interface FolderChoices {
+  /** null for the top of My Drive. */
+  folder: { id: string; name: string } | null;
+  /** Folders above, top first, as far up as the person can see. */
+  crumbs: Crumb[];
+  /** Whether things can be moved into this folder. */
+  canEdit: boolean;
+  folders: { id: string; name: string }[];
 }
