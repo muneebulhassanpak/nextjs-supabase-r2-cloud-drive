@@ -10,7 +10,7 @@ import { createClient } from "@/server/db/server";
 import { formError, pgErrorCode, toErrorBody, type ActionResult } from "@/server/errors";
 import { getRequestId } from "@/server/request-id";
 import { getFolderChoices, searchFolders } from "@/server/services/drive";
-import { deleteForever, emptyTrash } from "@/server/services/trash";
+import { deleteEntryForever, emptyTrash } from "@/server/services/trash";
 
 // Called from the browser with optimistic updates, so each returns a result instead of throwing.
 // The database enforces every rule; these only validate input and turn errors into messages.
@@ -179,19 +179,16 @@ export async function restoreItems(
 export async function deleteItemsForever(
   rawIds: string[],
 ): Promise<ActionResult<{ deleted: string[] }>> {
+  await requireUser();
   const ids = itemIds.safeParse(rawIds);
   if (!ids.success) return tooMany();
-  const { deleted, problem } = await deleteForever(ids.data);
-  if (deleted.length > 0) refresh();
-  if (problem === undefined) return { ok: true, data: { deleted } };
-  const result = await failure(problem);
-  if (!result.ok && deleted.length > 0) {
-    result.error.message = `${String(deleted.length)} deleted. ${result.error.message}`;
-  }
-  return result;
+  const result = await inTurn(ids.data, deleteEntryForever, { verb: "deleted" });
+  return result.ok ? { ok: true, data: { deleted: result.data.done.map((d) => d.id) } } : result;
 }
 
 export async function emptyMyTrash(): Promise<ActionResult<{ deletedFiles: number }>> {
+  // Outside the try: signing in again is a redirect, not an error to show.
+  await requireUser();
   try {
     const data = await emptyTrash();
     refresh();

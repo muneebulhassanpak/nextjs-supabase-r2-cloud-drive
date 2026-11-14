@@ -9,7 +9,7 @@ import {
   searchFolders,
 } from "@/server/services/drive";
 import { recordRecent } from "@/server/services/files";
-import { deleteForever, emptyTrash } from "@/server/services/trash";
+import { deleteEntryForever, emptyTrash } from "@/server/services/trash";
 import { completeUpload, startUpload } from "@/server/services/uploads";
 import { headObject } from "@/server/storage/objects";
 
@@ -194,20 +194,20 @@ describe("trash", () => {
     const key = await objectKey(file);
     const before = await storageUsed(owner);
     await rpc("trash_item", file);
-    expect(await deleteForever([file])).toEqual({ deleted: [file] });
+    expect(await deleteEntryForever(file)).toEqual({ data: [key], error: null });
     expect(await headObject(key)).toBeNull();
     expect(await storageUsed(owner)).toBe((before ?? 0) - 2048);
     expect(names(await getTrash())).not.toContain("goodbye.txt");
   });
 
-  it("refuses to delete forever for anyone but the owner, and says which went", async () => {
+  it("refuses to delete forever for anyone but the owner, and keeps the bytes", async () => {
     as(owner);
     const file = await upload("theirs.txt", shared);
     as(editor);
     await rpc("trash_item", file);
-    const result = await deleteForever([file]);
-    expect(result.deleted).toEqual([]);
-    expect((result.problem as { code?: string }).code).toBe("42501");
+    const result = await deleteEntryForever(file);
+    expect(result.data).toBeNull();
+    expect((result.error as { code?: string }).code).toBe("42501");
     expect(await headObject(await objectKey(file))).not.toBeNull();
   });
 
@@ -276,6 +276,11 @@ describe("the move picker", () => {
       crumbs: [{ id: work, name: "Work" }],
     });
     expect(names(await searchFolders("lient"))).toEqual(["Clients"]);
+    // Only folders count, however many files match; % and _ are matched as written.
+    await upload("client-notes.txt", work);
+    expect(names(await searchFolders("lient"))).toEqual(["Clients"]);
+    expect(await searchFolders("%")).toEqual([]);
+    expect(await searchFolders("C_ients")).toEqual([]);
 
     as(viewer);
     expect(await getFolderChoices(work)).toMatchObject({ canEdit: false });

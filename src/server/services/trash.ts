@@ -9,25 +9,19 @@ import { removeQuietly } from "@/server/storage/objects";
 // The space is given back by the database in the same step; the bytes are deleted here, and any
 // storage keeps by mistake are removed by the daily cleanup (objects no row points at).
 
-/** Deletes trash entries for good, one at a time. Reports which went and the first problem. */
-export async function deleteForever(
-  itemIds: readonly string[],
-): Promise<{ deleted: string[]; problem?: unknown }> {
+/**
+ * Deletes one trash entry for good, then its stored files. Shaped like a database call (data or
+ * error) so callers can run it over a selection like the other item actions.
+ */
+export async function deleteEntryForever(
+  itemId: string,
+): Promise<{ data: string[] | null; error: unknown }> {
   await requireUser();
   const supabase = await createClient();
-  const deleted: string[] = [];
-  const keys: string[] = [];
-  let problem: unknown;
-  for (const itemId of itemIds) {
-    const { data, error } = await supabase.rpc("delete_forever", { p_item_id: itemId });
-    if (error) problem ??= error;
-    else {
-      deleted.push(itemId);
-      keys.push(...data);
-    }
-  }
-  await removeQuietly(keys);
-  return problem === undefined ? { deleted } : { deleted, problem };
+  const { data, error } = await supabase.rpc("delete_forever", { p_item_id: itemId });
+  if (error) return { data: null, error };
+  await removeQuietly(data);
+  return { data, error: null };
 }
 
 /** Empties the person's trash: everything of theirs in it, whoever put it there. */
