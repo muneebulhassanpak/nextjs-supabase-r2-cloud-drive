@@ -85,6 +85,7 @@ select is(
     'share_link_file(text,uuid)',
     'start_upload(uuid,text,bigint,text)',
     'touch_recent(uuid)',
+    'trash_entries()',
     'trash_item(uuid)'
   ],
   'signed-in users can call only the app''s functions'

@@ -192,3 +192,25 @@ $$;
 
 revoke execute on function public.purge_trash(interval, integer) from public, anon, authenticated;
 grant execute on function public.purge_trash(interval, integer) to service_role;
+
+-- The trash page -----------------------------------------------------------------------------------
+
+-- What the caller's trash shows: each trash entry (an item trashed on its own, with whatever went
+-- with it) that is theirs, or that they put there from a folder shared with them. Runs as the
+-- caller, so row-level security still decides what comes back.
+create function public.trash_entries()
+returns setof public.items
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select i.*
+  from public.items i
+  where i.trash_root = i.id
+    and (i.owner_id = (select auth.uid()) or i.trashed_by = (select auth.uid()))
+  order by i.trashed_at desc, i.id
+$$;
+
+revoke execute on function public.trash_entries() from public, anon, authenticated;
+grant execute on function public.trash_entries() to authenticated;

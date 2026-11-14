@@ -2,7 +2,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(46);
+select plan(50);
 
 -- Trash ------------------------------------------------------------------------------------------------
 
@@ -36,6 +36,15 @@ select is_empty('select 1 from public.items where owner_id <> auth.uid()', 'view
 select tests.authenticate_as('editor');
 select is(tests.rows('select tests.label(id) from public.items where trashed_at is not null'),
   tests.sorted('{Sub,Deep,f2,f4,t1}'), 'editor still sees them, so they can restore them');
+select is(tests.rows('select tests.label(id) from public.trash_entries()'), tests.sorted('{Sub,f2}'),
+  'the editor''s trash lists the entries they put there, not what went in with them');
+select tests.authenticate_as('owner');
+select is(tests.rows('select tests.label(id) from public.trash_entries()'), tests.sorted('{Sub,f2,t1}'),
+  'the owner''s trash lists every entry of theirs, whoever put it there');
+select tests.authenticate_as('viewer');
+select is_empty('select 1 from public.trash_entries()', 'a viewer''s trash has none of it');
+select tests.authenticate_as('stranger');
+select is_empty('select 1 from public.trash_entries()', 'nor does a stranger''s');
 
 select tests.authenticate_as('owner');
 select throws_ok(format($$insert into public.items (parent_id, kind, name) values (%L, 'folder', 'new')$$, tests.id('Sub')),
