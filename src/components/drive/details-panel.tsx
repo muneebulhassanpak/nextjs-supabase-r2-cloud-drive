@@ -26,9 +26,10 @@ export function DetailsPanel({
   showClose?: boolean;
 }) {
   return (
-    <div className="grid content-start gap-6">
+    // minmax(0, 1fr): a long name must wrap inside the panel, not stretch it past its width.
+    <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-6">
       <div className="flex items-start justify-between gap-2">
-        <h2 className="truncate font-medium">{item ? item.name : "Details"}</h2>
+        <h2 className="min-w-0 font-medium wrap-anywhere">{item ? item.name : "Details"}</h2>
         {showClose && (
           <Button variant="ghost" size="icon-sm" onClick={onClose}>
             <X />

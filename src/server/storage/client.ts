@@ -20,6 +20,10 @@ export const storage = new S3Client({
   // Server calls are small metadata requests (file bytes go browser ↔ R2 directly), so fail
   // fast instead of the SDK's default retries with backoff.
   maxAttempts: 2,
+  // Without this the SDK adds a CRC32 of an empty body to signed upload links, which no real upload
+  // matches. Checksums are still sent where S3 requires one (DeleteObjects).
+  requestChecksumCalculation: "WHEN_REQUIRED",
+  responseChecksumValidation: "WHEN_REQUIRED",
   requestHandler: { connectionTimeout: 3_000, requestTimeout: 5_000 },
 });
 

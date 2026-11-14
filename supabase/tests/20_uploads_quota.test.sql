@@ -2,7 +2,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(27);
+select plan(33);
 
 create temporary table upload (id uuid, object_key text);
 grant all on upload to authenticated;
@@ -36,8 +36,8 @@ select throws_ok(format('select public.cancel_upload(%L)', (select id from uploa
 
 select tests.authenticate_as('editor');
 select lives_ok(format('select public.complete_upload(%L)', (select id from upload)), 'the uploader completes it');
-select throws_ok(format('select public.complete_upload(%L)', (select id from upload)), 'P0002', 'Upload not found',
-  'completing twice fails');
+select is(public.complete_upload((select id from upload)), 'report.pdf',
+  'completing twice gives the same answer (a retry after a lost response)');
 select throws_ok(format('select public.cancel_upload(%L)', (select id from upload)), 'P0002', 'Upload not found',
   'a finished upload cannot be cancelled (it goes to the trash instead)');
 select tests.authenticate_as('viewer');
@@ -88,6 +88,38 @@ select lives_ok(
   'cancelling gives the space back');
 select is((select storage_used from public.profiles where id = tests.id('owner')), 6000::bigint,
   'usage is back to what it was');
+
+-- Two uploads of the same name at once: names are only reserved when an upload finishes, so the
+-- second one to finish takes another name in the same step.
+select tests.authenticate_as('editor');
+create temporary table twin (n int, id uuid, object_key text);
+grant all on twin to authenticated;
+insert into twin select 1, * from public.start_upload(tests.id('Sub'), 'twin.txt', 1, 'text/plain');
+insert into twin select 2, * from public.start_upload(tests.id('Sub'), 'twin.txt', 1, 'text/plain');
+select is(public.complete_upload((select id from twin where n = 1)), 'twin.txt',
+  'the first to finish keeps the name, and gets it back');
+select throws_ok(format('select public.complete_upload(%L)', (select id from twin where n = 2)), '23505', null,
+  'the second can''t finish under the same name');
+select is(public.complete_upload((select id from twin where n = 2), ' twin (1).txt '), 'twin (1).txt',
+  'it finishes under a new name, trimmed');
+insert into twin select 3, * from public.start_upload(tests.id('Sub'), 'third.txt', 1, 'text/plain');
+select throws_ok(format('select public.complete_upload(%L, %L)', (select id from twin where n = 3), 'a/b'), '23514', null,
+  'the new name follows the usual name rules');
+
+-- The folder is checked again on completion: things may have changed since the upload started.
+insert into twin select 4, * from public.start_upload(tests.id('Sub'), 'late.txt', 1, 'text/plain');
+select tests.clear_authentication();
+update public.item_shares set role = 'viewer' where item_id = tests.id('F') and user_id = tests.id('editor');
+select tests.authenticate_as('editor');
+select throws_ok(format('select public.complete_upload(%L)', (select id from twin where n = 4)), '42501', null,
+  'an uploader who lost edit access can''t finish');
+select tests.clear_authentication();
+update public.item_shares set role = 'editor' where item_id = tests.id('F') and user_id = tests.id('editor');
+select tests.authenticate_as('owner');
+select public.trash_item(tests.id('Sub'));
+select tests.authenticate_as('editor');
+select throws_ok(format('select public.complete_upload(%L)', (select id from twin where n = 4)), 'P0002',
+  'The folder is in the trash', 'nor can one whose folder went to the trash');
 
 -- now() is fixed for the whole test transaction, so "older than -1 second" means "everything pending".
 select tests.clear_authentication();

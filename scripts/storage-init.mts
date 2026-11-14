@@ -1,11 +1,17 @@
 /**
- * Creates the local storage bucket (idempotent). Runs after `docker compose up`.
- * Local only: R2 buckets for staging and production are created once with Wrangler.
+ * Creates the local storage bucket and lets the local app send and read files from the browser
+ * (idempotent). Runs after `docker compose up`.
+ * Local only: R2 buckets for staging and production are set up with Wrangler (see storage/).
  *
  * The local defaults below must match `LOCAL` in src/env.ts and docker-compose.yml. This script
  * runs under plain Node, outside the app's module graph, so it can't import them.
  */
-import { CreateBucketCommand, HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  HeadBucketCommand,
+  PutBucketCorsCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 const endpoint = process.env.STORAGE_ENDPOINT ?? "http://localhost:9100";
 const bucket = process.env.STORAGE_BUCKET ?? "lockerly-local";
@@ -43,9 +49,25 @@ function isConnectionError(error: unknown): boolean {
   return /socket hang up/i.test(error.message) || isConnectionError(error.cause);
 }
 
+// The same rules as storage/r2-cors.*.json, for the dev server (3000) and the e2e server (3100).
+const cors = new PutBucketCorsCommand({
+  Bucket: bucket,
+  CORSConfiguration: {
+    CORSRules: [
+      {
+        AllowedOrigins: ["http://localhost:3000", "http://localhost:3100"],
+        AllowedMethods: ["PUT", "GET"],
+        AllowedHeaders: ["content-type"],
+        MaxAgeSeconds: 3600,
+      },
+    ],
+  },
+});
+
 for (let attempt = 1; ; attempt++) {
   try {
     if (!(await bucketExists())) await s3.send(new CreateBucketCommand({ Bucket: bucket }));
+    await s3.send(cors);
     console.warn(`Storage ready: ${endpoint}/${bucket}`);
     break;
   } catch (error) {

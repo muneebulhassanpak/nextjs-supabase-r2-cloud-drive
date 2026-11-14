@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { createClient } from "@/server/db/server";
+import { UnauthorizedError } from "@/server/errors";
 
 export interface CurrentUser {
   id: string;
@@ -28,5 +29,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
+  return user;
+}
+
+/** The signed-in user, for API routes: anyone else gets a 401, not a redirect. */
+export async function requireApiUser(): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) throw new UnauthorizedError("Sign in first.");
   return user;
 }

@@ -6,7 +6,8 @@
 # put back after each run. Needs the local stack (`pnpm db:start`); takes a few minutes.
 set -euo pipefail
 
-DB_CONTAINER="supabase_db_$(sed -n 's/^project_id = "\(.*\)"/\1/p' supabase/config.toml)"
+# The first project_id is the local project's; the [remotes.*] sections have their own.
+DB_CONTAINER="supabase_db_$(awk -F'"' '/^project_id = /{print $2; exit}' supabase/config.toml)"
 psql() { docker exec "$DB_CONTAINER" psql -U postgres -qtAX -v ON_ERROR_STOP=1 -c "$1"; }
 
 policy_sql() { # $1 table, $2 policy, $3 "real" | "open"

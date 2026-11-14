@@ -1,12 +1,14 @@
 "use client";
 
-import { ArrowUpDown, FolderPlus, Info, LayoutGrid, List } from "lucide-react";
+import { ArrowUpDown, FolderPlus, Info, LayoutGrid, List, Plus, Upload } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   startTransition,
   useMemo,
   useOptimistic,
+  useRef,
   useState,
+  type DragEvent,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -42,10 +44,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useUploads } from "@/components/uploads/upload-provider";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { TRASH_BATCH_SIZE } from "@/lib/drive/names";
 import { sortItems, type Sort, type SortKey } from "@/lib/drive/sort";
 import type { Crumb, DriveItem, DriveView } from "@/lib/drive/types";
+import { download } from "@/lib/files/api";
 import { cn } from "@/lib/utils";
 
 import { Breadcrumbs } from "./breadcrumbs";
@@ -118,6 +122,9 @@ export function FolderBrowser(props: FolderBrowserProps) {
   >(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [sheetItem, setSheetItem] = useState<DriveItem | null>(null);
+  const uploads = useUploads();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
   // Items can disappear (trashed, refreshed); the selection only ever holds what's on screen.
   const selected = sorted.filter((item) => selectedIds.has(item.id));
@@ -193,6 +200,41 @@ export function FolderBrowser(props: FolderBrowserProps) {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
+  // Uploads ------------------------------------------------------------------------------------
+
+  function upload(files: File[]) {
+    uploads.add(files, folder?.id ?? null, location);
+  }
+
+  /** Files dragged in from the computer (not text or links dragged around the page). */
+  const carriesFiles = (event: DragEvent) => canEdit && event.dataTransfer.types.includes("Files");
+
+  function onDragOver(event: DragEvent) {
+    if (!carriesFiles(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDragging(true);
+  }
+
+  function onDrop(event: DragEvent) {
+    event.preventDefault();
+    setDragging(false);
+    const files: File[] = [];
+    let folders = 0;
+    for (const entry of Array.from(event.dataTransfer.items)) {
+      if (entry.kind !== "file") continue;
+      // A dropped folder arrives as an unreadable "file"; folder uploads aren't supported yet.
+      if (entry.webkitGetAsEntry()?.isDirectory) folders += 1;
+      else {
+        const file = entry.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (folders > 0)
+      toast.info("Folders can't be uploaded yet. Drop the files inside them instead.");
+    upload(files);
+  }
+
   // Selection and opening ----------------------------------------------------------------------
 
   function open(item: DriveItem) {
@@ -230,7 +272,11 @@ export function FolderBrowser(props: FolderBrowserProps) {
     const [first] = targets;
     if (action === "trash") trash(targets);
     else if (first && action === "open") open(first);
-    else if (first && action === "rename") setDialog({ kind: "rename", item: first });
+    else if (first && action === "download") {
+      download(first.id).catch((error: unknown) => {
+        toast.error(error instanceof Error ? error.message : "Couldn't download that.");
+      });
+    } else if (first && action === "rename") setDialog({ kind: "rename", item: first });
     else if (first && action === "details") {
       setSelectedIds(new Set([first.id]));
       setDetailsOpen(true);
@@ -353,7 +399,28 @@ export function FolderBrowser(props: FolderBrowserProps) {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 gap-6">
+    <div
+      className="relative flex min-h-0 flex-1 gap-6"
+      onDragEnter={onDragOver}
+      onDragOver={onDragOver}
+    >
+      {dragging && (
+        <div
+          className="absolute -inset-2 z-30 flex justify-center rounded-2xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[1px]"
+          onDragOver={onDragOver}
+          onDragLeave={() => {
+            setDragging(false);
+          }}
+          onDrop={onDrop}
+        >
+          {/* Sticks to the middle of the screen, however long the folder is. */}
+          <div className="pointer-events-none sticky top-[calc(50dvh-3rem)] flex h-fit flex-col items-center gap-2 pt-[min(30dvh,8rem)] text-center">
+            <Upload className="size-8 text-primary" aria-hidden />
+            <p className="font-medium">Drop files to upload</p>
+            <p className="text-sm text-muted-foreground">to {location}</p>
+          </div>
+        </div>
+      )}
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Breadcrumbs
@@ -363,15 +430,46 @@ export function FolderBrowser(props: FolderBrowserProps) {
           />
           <div className="flex items-center gap-1">
             {canEdit && (
-              <Button
-                onClick={() => {
-                  setDialog({ kind: "new" });
-                }}
-                className="mr-1"
-              >
-                <FolderPlus />
-                New folder
-              </Button>
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="mr-1">
+                      <Plus />
+                      New
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setDialog({ kind: "new" });
+                      }}
+                    >
+                      <FolderPlus />
+                      New folder
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        fileInput.current?.click();
+                      }}
+                    >
+                      <Upload />
+                      File upload
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  multiple
+                  hidden
+                  aria-label="Files to upload"
+                  onChange={(event) => {
+                    // Copy first: clearing the input empties its file list.
+                    upload(Array.from(event.target.files ?? []));
+                    event.target.value = "";
+                  }}
+                />
+              </>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -456,7 +554,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
               title={folder ? "This folder is empty" : "Your drive is empty"}
             >
               {canEdit
-                ? "Create a folder to start organising. Uploading files arrives soon."
+                ? "Drop files here, or use New to upload files or create a folder."
                 : "Nothing has been added here yet."}
             </EmptyState>
           ) : view === "grid" ? (
