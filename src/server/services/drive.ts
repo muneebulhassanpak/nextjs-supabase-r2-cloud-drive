@@ -13,9 +13,12 @@ export const FOLDER_PAGE_SIZE = 1000;
 /** Most items Recent shows. */
 export const RECENT_LIMIT = 100;
 
+const ITEM_FIELDS =
+  "id, kind, name, size, mime_type, category, updated_at, parent_id, owner:profiles!items_owner_id_fkey(id, full_name, email)";
 // `stars` holds only the caller's own star (row-level security), so it says whether they starred it.
-const ITEM_COLUMNS =
-  "id, kind, name, size, mime_type, category, updated_at, parent_id, owner:profiles!items_owner_id_fkey(id, full_name, email), stars(user_id)";
+const ITEM_COLUMNS = `${ITEM_FIELDS}, stars(user_id)`;
+// `!inner` keeps only items with a star, and the star is always the caller's own.
+const STARRED_COLUMNS = `${ITEM_FIELDS}, stars!inner(user_id)`;
 
 interface ItemRow {
   id: string;
@@ -82,11 +85,13 @@ export async function getMyDriveRoot(): Promise<FolderView> {
   return { folder: null, crumbs: [], sharedRoot: false, items: data.map(toDriveItem) };
 }
 
+type FolderHeader = Omit<FolderView, "items">;
+
 /**
- * A folder and what's in it, or null when it doesn't exist, isn't a folder, is in the trash, or
- * the person can't see it (all look the same, so ids reveal nothing).
+ * A folder, the path to it and the person's role on it, or null when it doesn't exist, isn't a
+ * folder, is in the trash, or the person can't see it (all look the same, so ids reveal nothing).
  */
-export const getFolder = cache(async (folderId: string): Promise<FolderView | null> => {
+const getFolderHeader = cache(async (folderId: string): Promise<FolderHeader | null> => {
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -99,23 +104,11 @@ export const getFolder = cache(async (folderId: string): Promise<FolderView | nu
   if (error) throw error;
   if (!folder || folder.trashed_at) return null;
 
-  const [children, above, role] = await Promise.all([
-    supabase
-      .from("items")
-      .select(ITEM_COLUMNS)
-      .eq("parent_id", folderId)
-      .is("trashed_at", null)
-      .eq("status", "ready")
-      .order("kind")
-      .order("name")
-      .order("id")
-      .limit(FOLDER_PAGE_SIZE)
-      .overrideTypes<ItemRow[], { merge: false }>(),
+  const [above, role] = await Promise.all([
     // An empty list matches nothing, so the top-level case needs no special path.
     supabase.from("items").select("id, name, owner_id").in("id", folder.ancestors),
     supabase.rpc("item_access_role", { p_item_id: folderId }),
   ]);
-  if (children.error) throw children.error;
   if (above.error) throw above.error;
   if (role.error) throw role.error;
   // Generated types can't tell that the function returns NULL for items the caller can't see.
@@ -136,8 +129,30 @@ export const getFolder = cache(async (folderId: string): Promise<FolderView | nu
     folder: { ...toDriveItem(folder), role: myRole },
     crumbs,
     sharedRoot: topOwner !== user.id,
-    items: children.data.map(toDriveItem),
   };
+});
+
+/** A folder and what's in it, or null when the person can't open it (see getFolderHeader). */
+export const getFolder = cache(async (folderId: string): Promise<FolderView | null> => {
+  const supabase = await createClient();
+  // Both start at once; the listing is only used if the folder can be opened.
+  const [header, children] = await Promise.all([
+    getFolderHeader(folderId),
+    supabase
+      .from("items")
+      .select(ITEM_COLUMNS)
+      .eq("parent_id", folderId)
+      .is("trashed_at", null)
+      .eq("status", "ready")
+      .order("kind")
+      .order("name")
+      .order("id")
+      .limit(FOLDER_PAGE_SIZE)
+      .overrideTypes<ItemRow[], { merge: false }>(),
+  ]);
+  if (!header) return null;
+  if (children.error) throw children.error;
+  return { ...header, items: children.data.map(toDriveItem) };
 });
 
 /** What the person starred and can still see, folders first. */
@@ -146,8 +161,7 @@ export async function getStarred(): Promise<DriveItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("items")
-    // `!inner` keeps only items with a star, and the star is always the caller's own.
-    .select(ITEM_COLUMNS.replace("stars(", "stars!inner("))
+    .select(STARRED_COLUMNS)
     .is("trashed_at", null)
     .eq("status", "ready")
     .order("kind")
@@ -193,15 +207,29 @@ export async function getTrash(): Promise<DriveItem[]> {
 
 /** One step of the "Move to" picker: a folder and the folders in it, or null if it's hidden. */
 export async function getFolderChoices(folderId: string | null): Promise<FolderChoices | null> {
-  const view = folderId === null ? await getMyDriveRoot() : await getFolder(folderId);
-  if (!view) return null;
+  const user = await requireUser();
+  const header = folderId === null ? null : await getFolderHeader(folderId);
+  if (folderId !== null && !header) return null;
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("items")
+    .select("id, name")
+    .eq("kind", "folder")
+    .is("trashed_at", null)
+    .eq("status", "ready");
+  query =
+    folderId === null
+      ? query.eq("owner_id", user.id).is("parent_id", null)
+      : query.eq("parent_id", folderId);
+  const { data, error } = await query.order("name").order("id").limit(FOLDER_PAGE_SIZE);
+  if (error) throw error;
+
   return {
-    folder: view.folder && { id: view.folder.id, name: view.folder.name },
-    crumbs: view.crumbs,
-    canEdit: view.folder?.role !== "viewer",
-    folders: view.items
-      .filter((item) => item.kind === "folder")
-      .map((item) => ({ id: item.id, name: item.name })),
+    folder: header?.folder ? { id: header.folder.id, name: header.folder.name } : null,
+    crumbs: header?.crumbs ?? [],
+    canEdit: header?.folder?.role !== "viewer",
+    folders: data,
   };
 }
 
@@ -209,10 +237,17 @@ export async function getFolderChoices(folderId: string | null): Promise<FolderC
 export async function searchFolders(query: string): Promise<{ id: string; name: string }[]> {
   await requireUser();
   const supabase = await createClient();
+  // Matched here rather than through search_items, whose limit applies before files are left out.
+  const pattern = query.trim().replace(/[\\%_]/g, (character) => `\\${character}`);
   const { data, error } = await supabase
-    .rpc("search_items", { p_query: query, p_limit: 100 })
+    .from("items")
     .select("id, name")
     .eq("kind", "folder")
+    .is("trashed_at", null)
+    .eq("status", "ready")
+    .ilike("name", `%${pattern}%`)
+    .order("name")
+    .order("id")
     .limit(20);
   if (error) throw error;
   return data;
