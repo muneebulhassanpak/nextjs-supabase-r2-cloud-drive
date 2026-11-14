@@ -20,7 +20,8 @@ export function DetailsPanel({
 }: {
   item: DriveItem | null;
   selectedCount: number;
-  location: string;
+  /** The folder it's in, when the page is a folder (collections span many). */
+  location?: string | undefined;
   currentUserId: string;
   onClose: () => void;
   showClose?: boolean;
@@ -63,8 +64,22 @@ export function DetailsPanel({
                 {formatModified(item.updatedAt)}
               </time>
             </dd>
-            <dt className="text-muted-foreground">Location</dt>
-            <dd className="truncate">{location}</dd>
+            {item.trashedAt && (
+              <>
+                <dt className="text-muted-foreground">Trashed</dt>
+                <dd>
+                  <time dateTime={item.trashedAt} suppressHydrationWarning>
+                    {formatModified(item.trashedAt)}
+                  </time>
+                </dd>
+              </>
+            )}
+            {location && (
+              <>
+                <dt className="text-muted-foreground">Location</dt>
+                <dd className="truncate">{location}</dd>
+              </>
+            )}
           </dl>
         </>
       ) : (

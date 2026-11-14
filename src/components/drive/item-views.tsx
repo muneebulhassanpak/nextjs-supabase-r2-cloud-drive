@@ -1,7 +1,7 @@
 "use client";
 
-import { EllipsisVertical } from "lucide-react";
-import { useState } from "react";
+import { EllipsisVertical, Star } from "lucide-react";
+import { Fragment, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { DriveItem } from "@/lib/drive/types";
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { formatModified } from "./format";
 import { ItemIcon } from "./item-icon";
 
-import type { ComponentProps, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { ComponentProps, HTMLAttributes, KeyboardEvent, MouseEvent, ReactNode } from "react";
 
 export interface ItemHandlers {
   onClick: (event: MouseEvent, item: DriveItem) => void;
@@ -25,11 +25,35 @@ export interface ItemHandlers {
   wrapContextMenu: (item: DriveItem, content: ReactNode) => ReactNode;
 }
 
+/** Extra props for an item's element: dragging it, and dropping things onto folders. */
+export type ItemElementProps = HTMLAttributes<HTMLDivElement> & {
+  "data-drop-target"?: boolean;
+};
+
 interface ViewProps extends ItemHandlers {
   items: DriveItem[];
   selected: Set<string>;
   pending: Set<string>;
   currentUserId: string;
+  /** The date column: when it was modified (default), opened, or trashed. */
+  dateColumn?: { label: string; value: (item: DriveItem) => string | undefined };
+  /** Shown under headings ("Today", "Earlier") instead of as one list. Same items, same order. */
+  groups?: { label: string; items: DriveItem[] }[];
+  itemProps?: (item: DriveItem) => ItemElementProps;
+}
+
+const MODIFIED = { label: "Modified", value: (item: DriveItem) => item.updatedAt };
+
+/** The item's name, with a star if the person starred it. */
+function ItemName({ item, className }: { item: DriveItem; className: string }) {
+  return (
+    <>
+      <span className={cn("truncate", className)}>{item.name}</span>
+      {item.starred && (
+        <Star className="size-3.5 shrink-0 fill-current text-star" aria-label="Starred" />
+      )}
+    </>
+  );
 }
 
 /** The "more" button. Passes through what a menu trigger adds (handlers, aria, ref). */
@@ -63,6 +87,7 @@ function rowProps(item: DriveItem, props: ViewProps, className: string) {
   const isSelected = props.selected.has(item.id);
   const isPending = props.pending.has(item.id);
   return {
+    ...props.itemProps?.(item),
     role: "row",
     tabIndex: isPending ? -1 : 0,
     "aria-selected": isSelected,
@@ -82,12 +107,45 @@ function rowProps(item: DriveItem, props: ViewProps, className: string) {
       "group outline-none focus-visible:ring-3 focus-visible:ring-ring/50 select-none",
       isSelected ? "bg-primary/10 dark:bg-primary/20" : "hover:bg-accent/60",
       isPending && "pointer-events-none opacity-60",
+      "data-[drop-target=true]:bg-primary/15 data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-primary/60",
       className,
     ),
   } as const;
 }
 
 export function ListView(props: ViewProps) {
+  const date = props.dateColumn ?? MODIFIED;
+  const rows = (items: DriveItem[]) =>
+    items.map((item) =>
+      props.wrapContextMenu(
+        item,
+        <div
+          key={item.id}
+          {...rowProps(
+            item,
+            props,
+            "grid min-h-14 grid-cols-[1fr_auto] items-center gap-4 border-b px-3 sm:grid-cols-[1fr_8rem_auto] md:min-h-12 lg:grid-cols-[1fr_10rem_8rem_6rem_auto]",
+          )}
+        >
+          <div role="gridcell" className="flex min-w-0 items-center gap-3">
+            <ItemIcon item={item} className="size-5 shrink-0" />
+            <ItemName item={item} className="font-medium" />
+          </div>
+          <div role="gridcell" className="hidden truncate text-muted-foreground lg:block">
+            {item.owner.id === props.currentUserId
+              ? "me"
+              : (item.owner.name ?? item.owner.email ?? "—")}
+          </div>
+          <div role="gridcell" className="hidden text-muted-foreground sm:block">
+            <DateCell iso={date.value(item)} />
+          </div>
+          <div role="gridcell" className="hidden text-muted-foreground lg:block">
+            {item.size === null ? "—" : formatBytes(item.size)}
+          </div>
+          <div role="gridcell">{props.renderMore(item, <MoreButton item={item} />)}</div>
+        </div>,
+      ),
+    );
   return (
     <div role="grid" aria-label="Files and folders" aria-multiselectable className="text-sm">
       <div role="rowgroup">
@@ -100,7 +158,7 @@ export function ListView(props: ViewProps) {
             Owner
           </div>
           <div role="columnheader" className="hidden sm:block">
-            Modified
+            {date.label}
           </div>
           <div role="columnheader" className="hidden lg:block">
             Size
@@ -110,47 +168,41 @@ export function ListView(props: ViewProps) {
           </div>
         </div>
       </div>
-      <div role="rowgroup">
-        {props.items.map((item) =>
-          props.wrapContextMenu(
-            item,
-            <div
-              key={item.id}
-              {...rowProps(
-                item,
-                props,
-                "grid min-h-14 grid-cols-[1fr_auto] items-center gap-4 border-b px-3 sm:grid-cols-[1fr_8rem_auto] md:min-h-12 lg:grid-cols-[1fr_10rem_8rem_6rem_auto]",
-              )}
-            >
-              <div role="gridcell" className="flex min-w-0 items-center gap-3">
-                <ItemIcon item={item} className="size-5 shrink-0" />
-                <span className="truncate font-medium">{item.name}</span>
-              </div>
-              <div role="gridcell" className="hidden truncate text-muted-foreground lg:block">
-                {item.owner.id === props.currentUserId
-                  ? "me"
-                  : (item.owner.name ?? item.owner.email ?? "—")}
-              </div>
-              <div role="gridcell" className="hidden text-muted-foreground sm:block">
-                <time dateTime={item.updatedAt} suppressHydrationWarning>
-                  {formatModified(item.updatedAt)}
-                </time>
-              </div>
-              <div role="gridcell" className="hidden text-muted-foreground lg:block">
-                {item.size === null ? "—" : formatBytes(item.size)}
-              </div>
-              <div role="gridcell">{props.renderMore(item, <MoreButton item={item} />)}</div>
-            </div>,
-          ),
-        )}
-      </div>
+      {props.groups ? (
+        props.groups.map((group) => (
+          <div key={group.label} role="rowgroup" aria-label={group.label}>
+            <div role="row">
+              <h2
+                role="gridcell"
+                className="px-3 pt-6 pb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              >
+                {group.label}
+              </h2>
+            </div>
+            {rows(group.items)}
+          </div>
+        ))
+      ) : (
+        <div role="rowgroup">{rows(props.items)}</div>
+      )}
     </div>
   );
 }
 
+function DateCell({ iso }: { iso: string | undefined }) {
+  if (!iso) return <>—</>;
+  return (
+    <time dateTime={iso} suppressHydrationWarning>
+      {formatModified(iso)}
+    </time>
+  );
+}
+
 export function GridView(props: ViewProps) {
-  const folders = props.items.filter((item) => item.kind === "folder");
-  const files = props.items.filter((item) => item.kind === "file");
+  const sections = props.groups ?? [
+    { label: "Folders", items: props.items.filter((item) => item.kind === "folder") },
+    { label: "Files", items: props.items.filter((item) => item.kind === "file") },
+  ];
   const section = (title: string, items: DriveItem[]) =>
     items.length > 0 && (
       <div role="rowgroup" aria-label={title} className="grid gap-3">
@@ -180,7 +232,7 @@ export function GridView(props: ViewProps) {
                 )}
                 <div role="gridcell" className="flex min-w-0 items-center gap-2 pl-2">
                   <ItemIcon item={item} className="size-4 shrink-0" />
-                  <span className="truncate text-sm font-medium">{item.name}</span>
+                  <ItemName item={item} className="text-sm font-medium" />
                   <span className="ml-auto">
                     {props.renderMore(item, <MoreButton item={item} />)}
                   </span>
@@ -193,8 +245,9 @@ export function GridView(props: ViewProps) {
     );
   return (
     <div role="grid" aria-label="Files and folders" aria-multiselectable className="grid gap-6">
-      {section("Folders", folders)}
-      {section("Files", files)}
+      {sections.map((entry) => (
+        <Fragment key={entry.label}>{section(entry.label, entry.items)}</Fragment>
+      ))}
     </div>
   );
 }
