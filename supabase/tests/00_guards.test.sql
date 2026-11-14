@@ -71,7 +71,7 @@ select is(
         where n.nspname = 'public' and has_function_privilege('authenticated', p.oid, 'execute') order by 1),
   array[
     'cancel_upload(uuid)',
-    'complete_upload(uuid)',
+    'complete_upload(uuid,text)',
     'delete_forever(uuid)',
     'empty_trash()',
     'item_access_role(uuid)',

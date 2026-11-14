@@ -103,14 +103,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "avatar_url": string | null,"created_at": string,"drive_view": Database["public"]['Enums']["drive_view"] | null,"email": string,"full_name": string | null,"id": string,"is_demo": boolean,"storage_quota": number,"storage_used": number,"updated_at": string
+                    "avatar_key": string | null,"created_at": string,"drive_view": Database["public"]['Enums']["drive_view"] | null,"email": string,"full_name": string | null,"id": string,"is_demo": boolean,"storage_quota": number,"storage_used": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar_url"?: string | null,"created_at"?: string,"drive_view"?: Database["public"]['Enums']["drive_view"] | null,"email": string,"full_name"?: string | null,"id": string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
+                    "avatar_key"?: string | null,"created_at"?: string,"drive_view"?: Database["public"]['Enums']["drive_view"] | null,"email": string,"full_name"?: string | null,"id": string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "avatar_url"?: string | null,"created_at"?: string,"drive_view"?: Database["public"]['Enums']["drive_view"] | null,"email"?: string,"full_name"?: string | null,"id"?: string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
+                    "avatar_key"?: string | null,"created_at"?: string,"drive_view"?: Database["public"]['Enums']["drive_view"] | null,"email"?: string,"full_name"?: string | null,"id"?: string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -232,7 +232,7 @@ isOneToOne: false
 { Args: { "p_older_than"?: string }; Returns: string[]
                            },
 "complete_upload":
-{ Args: { "p_item_id": string }; Returns: undefined
+{ Args: { "p_item_id": string,"p_name"?: string }; Returns: string
                            },
 "delete_forever":
 { Args: { "p_item_id": string }; Returns: string[]
