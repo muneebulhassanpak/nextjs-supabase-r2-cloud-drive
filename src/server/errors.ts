@@ -72,8 +72,21 @@ export function pgErrorCode(error: unknown): string | undefined {
 }
 
 /**
- * Database refusals that mean "you can't do that" rather than "something broke": row-level
- * security blocking a write, and unique or foreign key violations.
+ * The message of a database error raised on purpose by our own SQL (`raise exception '...'`).
+ * Those are written for users; anything else from Postgres is not, so callers pass a fallback.
+ */
+function databaseMessage(error: unknown, fallback: string): string {
+  for (let e: unknown = error; e && typeof e === "object"; e = (e as { cause?: unknown }).cause) {
+    const message = (e as { message?: unknown }).message;
+    if (typeof message === "string" && message.length > 0) return message;
+  }
+  return fallback;
+}
+
+/**
+ * Database refusals that mean "you can't do that" rather than "something broke". Besides the
+ * standard codes, the database raises its own (see supabase/migrations/*_triggers.sql):
+ * LK409 conflict with the current state, LK413 quota or size limit, LK422 invalid input.
  */
 function fromDatabaseError(error: unknown, requestId?: string): AppError | undefined {
   switch (pgErrorCode(error)) {
@@ -82,12 +95,26 @@ function fromDatabaseError(error: unknown, requestId?: string): AppError | undef
       // Log it, so a deploy-wide misconfiguration doesn't hide behind "no access".
       logger.warn({ err: error, requestId }, "database refused the request (42501)");
       return new ForbiddenError("You don't have access to do that.");
+    case "P0002":
+      // Raised for both "doesn't exist" and "you can't see it", so ids reveal nothing.
+      return new NotFoundError("We couldn't find that. It may have been moved or deleted.");
     case "23505":
       return new ConflictError("That already exists.");
     case "23503":
       return new ConflictError(
         "Something this depends on was changed or removed. Refresh and try again.",
       );
+    case "LK409":
+      return new ConflictError(databaseMessage(error, "That can't be done right now."));
+    case "LK413":
+      return new QuotaExceededError(databaseMessage(error, "Not enough storage space left."));
+    case "LK422":
+      return new ValidationError(databaseMessage(error, "That isn't valid."));
+    case "22023":
+    case "23514":
+    case "22P02":
+      // Postgres' own wording names constraints and types, so it isn't shown.
+      return new ValidationError("That isn't valid.");
     default:
       return undefined;
   }

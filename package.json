@@ -1,6 +1,6 @@
 {
   "name": "lockerly",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -16,6 +16,7 @@
     "db:stop": "docker compose stop && supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
+    "db:mutations": "scripts/check-policy-mutations.sh",
     "db:lint": "supabase db lint --level warning --fail-on warning",
     "db:types": "supabase gen types typescript --schema public > src/server/db/database.types.ts",
     "db:advisors": "supabase db advisors --level info --fail-on warn",
