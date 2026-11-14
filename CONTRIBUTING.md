@@ -77,6 +77,17 @@ No `.env.local` is needed: every setting defaults to the local stack. Check it w
 
 Local Supabase uses ports 553xx (not the default 543xx), so it can run next to other Supabase projects. `pnpm db:stop` stops everything.
 
+To try the app, create an account at http://localhost:3000/sign-up. Emails are never really sent locally: open the confirmation (or password reset) link from Mailpit.
+
+### Auth settings
+
+Auth is configured in `supabase/config.toml` and the email templates in `supabase/templates/`. The `[remotes.staging]` and `[remotes.production]` sections hold what differs on the hosted projects (site URL, Resend SMTP). To apply a change there, review it first, then push it with the Resend key in your shell (never in a file in the repo):
+
+```bash
+pnpm exec supabase config diff --remote=<project-ref>
+pnpm exec supabase config push --remote=<project-ref>
+```
+
 > Never put staging or production keys in `.env.local`. Local commands would then act on real data.
 
 ## Checks
@@ -94,7 +105,7 @@ pnpm build && pnpm test:e2e    # Playwright against the production build
 ```
 
 - **Unit tests** (`tests/unit/`) need no services.
-- **Integration tests** (`tests/integration/`) use the local stack.
+- **Integration tests** (`tests/integration/`) use the local stack, including Auth and Mailpit. Helpers in `tests/support/` refuse any other stack.
 - **Database tests** (`supabase/tests/`) run inside a transaction that is rolled back.
 - Coverage below 85% fails the run, and so does any unexpected `console.error`.
 
