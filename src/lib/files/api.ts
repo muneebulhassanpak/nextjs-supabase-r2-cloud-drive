@@ -77,6 +77,31 @@ export const removeAvatar = () => api<undefined>("/api/avatar", { method: "DELET
 export const fileUrl = (id: string, disposition: "inline" | "attachment") =>
   api<{ url: string }>(`/api/files/${id}/url?disposition=${disposition}`);
 
+/** Records that a file was opened, for Recents. Never throws: Recents can miss one. */
+export const markOpened = (id: string) =>
+  api<undefined>(`/api/files/${id}/opened`, { method: "POST" }).catch(() => undefined);
+
+/** Where grid view loads an image's thumbnail from (a redirect to storage). */
+export const thumbnailSrc = (id: string) => `/api/files/${id}/thumbnail`;
+
+/**
+ * Reads the start of a file as text, at most `bytes` of it: a range request straight to storage.
+ * Storage may ignore the range and send everything; only the first `bytes` are kept either way.
+ */
+export async function readText(url: string, bytes: number): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch(url, { headers: { range: `bytes=0-${String(bytes - 1)}` } });
+  } catch {
+    throw new TransferError("You seem to be offline. Check your connection and try again.");
+  }
+  // 416: the range starts past the end, which is where an empty file ends.
+  if (response.status === 416) return "";
+  if (!response.ok) throw new TransferError("Couldn't load this file. Try again.");
+  const buffer = await response.arrayBuffer();
+  return new TextDecoder().decode(buffer.slice(0, bytes));
+}
+
 /**
  * Sends a file to storage with a signed link, reporting progress. XHR rather than fetch, because
  * fetch can't report upload progress.
