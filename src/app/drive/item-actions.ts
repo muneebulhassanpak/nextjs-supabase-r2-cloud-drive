@@ -4,12 +4,12 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 
 import { itemNameSchema, ITEMS_PER_REQUEST } from "@/lib/drive/names";
-import type { DriveView } from "@/lib/drive/types";
+import type { DriveView, FolderChoices } from "@/lib/drive/types";
 import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
 import { formError, pgErrorCode, toErrorBody, type ActionResult } from "@/server/errors";
 import { getRequestId } from "@/server/request-id";
-import { getFolderChoices, searchFolders, type FolderChoices } from "@/server/services/drive";
+import { getFolderChoices, searchFolders } from "@/server/services/drive";
 import { deleteForever, emptyTrash } from "@/server/services/trash";
 
 // Called from the browser with optimistic updates, so each returns a result instead of throwing.

@@ -30,3 +30,14 @@ export interface Crumb {
   id: string;
   name: string;
 }
+
+/** One step of the "Move to" picker: a folder and the folders inside it. */
+export interface FolderChoices {
+  /** null for the top of My Drive. */
+  folder: { id: string; name: string } | null;
+  /** Folders above, top first, as far up as the person can see. */
+  crumbs: Crumb[];
+  /** Whether things can be moved into this folder. */
+  canEdit: boolean;
+  folders: { id: string; name: string }[];
+}

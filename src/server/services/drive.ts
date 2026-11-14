@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 
-import type { AccessRole, Crumb, DriveItem } from "@/lib/drive/types";
+import type { AccessRole, Crumb, DriveItem, FolderChoices } from "@/lib/drive/types";
 import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
 
@@ -189,16 +189,6 @@ export async function getTrash(): Promise<DriveItem[]> {
     .overrideTypes<(ItemRow & { trashed_at: string })[], { merge: false }>();
   if (error) throw error;
   return data.map((row) => ({ ...toDriveItem(row), trashedAt: row.trashed_at }));
-}
-
-export interface FolderChoices {
-  /** null for the top of My Drive. */
-  folder: { id: string; name: string } | null;
-  /** Folders above, top first, as far up as the person can see. */
-  crumbs: Crumb[];
-  /** Whether things can be moved into this folder. */
-  canEdit: boolean;
-  folders: { id: string; name: string }[];
 }
 
 /** One step of the "Move to" picker: a folder and the folders in it, or null if it's hidden. */
