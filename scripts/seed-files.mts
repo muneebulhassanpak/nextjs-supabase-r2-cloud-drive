@@ -5,7 +5,7 @@
  * already in the folder are skipped.
  *
  *   pnpm seed:files                       # ava@demo.dev / demo-pass-123
- *   SEED_EMAIL=… SEED_PASSWORD=… pnpm seed:files
+ *   SEED_EMAIL=… SEED_PASSWORD=… [SEED_NAME=…] pnpm seed:files
  *
  * Local only: it reads the keys from `supabase status` and refuses any other database. Runs under
  * plain Node, so it can't import the app's modules; the storage defaults match `LOCAL` in src/env.ts.
@@ -83,7 +83,10 @@ if (signIn.error) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: email === "ava@demo.dev" ? "Ava Demo" : email.split("@")[0] },
+    user_metadata: {
+      full_name:
+        process.env.SEED_NAME ?? (email === "ava@demo.dev" ? "Ava Demo" : email.split("@")[0]),
+    },
   });
   if (error) throw error;
   signIn = await user.auth.signInWithPassword({ email, password });
