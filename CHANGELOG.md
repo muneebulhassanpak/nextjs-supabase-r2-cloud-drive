@@ -7,6 +7,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Move files and folders with "Move to…": browse to a folder or search for one by name. On a computer you can also drag items onto a folder in the list or onto a breadcrumb.
+- Select several items and move, star or trash them together.
+- Star anything you can see; starred items are marked in every list and gathered on the Starred page.
+- The Recent page lists files you've opened, grouped into Today, This week and Earlier in your own time zone.
+- The Trash page: restore items to the folder they came from (or to My Drive if that folder is gone, under a new name if the old one is taken), delete them forever, or empty the trash. Moving something to the trash can be undone from the message that confirms it.
+- Deleting forever removes the stored files and gives the space back straight away.
+- Items left in the trash for 30 days are deleted for good by a daily job.
+
+### Fixed
+
+- End-to-end tests wait for the first drive page after signing in long enough for a busy machine, instead of failing now and then.
+
 ## [0.6.2] - 2026-11-14
 
 ### Fixed
