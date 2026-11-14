@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 
 import { Container } from "./section";
+import { StickyHeader } from "./sticky-header";
 
 const LINKS = [
   { href: "/#features", label: "Features" },
@@ -15,7 +16,7 @@ const LINKS = [
 /** The header on every public page: the landing page and the auth pages. */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-20 scroll-edge">
+    <StickyHeader>
       <Container className="flex h-16 items-center gap-4">
         <Link href="/" aria-label="Lockerly home" className="rounded-lg">
           <Brand />
@@ -37,6 +38,6 @@ export function SiteHeader() {
           </Link>
         </nav>
       </Container>
-    </header>
+    </StickyHeader>
   );
 }

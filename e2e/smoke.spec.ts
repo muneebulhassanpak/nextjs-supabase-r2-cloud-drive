@@ -24,6 +24,27 @@ test("the home page shows the product and switches theme", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
 
+test("the recorded clips match the theme and can be paused", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  const clips = page.locator("[aria-roledescription=slide]").first().locator("video:visible");
+  await expect(clips).toHaveCount(1);
+  await clips.evaluate((video) => {
+    video.scrollIntoView({ block: "center" });
+  });
+  await expect(clips.locator("source").first()).toHaveAttribute("src", "/demos/upload-dark.webm");
+
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+  expect(await clips.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
+
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Preview", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
 test("people who prefer less motion get a still page, with every section shown", async ({
   page,
 }) => {
