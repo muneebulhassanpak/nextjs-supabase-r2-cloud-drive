@@ -1,0 +1,6 @@
+{
+  "theme": "system",
+  "view": "grid",
+  "notifications": { "email": true, "push": false },
+  "favourites": ["Projects", "Invoices"]
+}

@@ -21,6 +21,16 @@ import { storage } from "./client";
 export const UPLOAD_URL_TTL = 5 * 60;
 /** How long a download link works: enough to start the download, too short to pass around. */
 export const DOWNLOAD_URL_TTL = 60;
+/**
+ * How long a link for viewing audio, video or a PDF works. Players and PDF viewers fetch more of the
+ * file as people watch, skip ahead or scroll, so a 60-second link would stop them half way through.
+ */
+export const VIEWER_URL_TTL = 30 * 60;
+/**
+ * Thumbnail links are signed for fixed 10-minute windows (and work for 20), so a grid shown again
+ * within the window asks for the same URL and the browser reuses the image it already has.
+ */
+const THUMBNAIL_WINDOW = 10 * 60;
 
 /**
  * A link that uploads exactly one object: the key, size and type are part of the signature, so the
@@ -45,20 +55,44 @@ export async function signDownload(
   key: string,
   file: { name: string; mimeType: string },
   disposition: Disposition,
+  expiresIn = DOWNLOAD_URL_TTL,
 ): Promise<string> {
+  return getSignedUrl(storage, getCommand(key, file, disposition, expiresIn), { expiresIn });
+}
+
+/** A link to show an image in a grid: the same URL for everyone asking within one window. */
+export async function signThumbnail(
+  key: string,
+  file: { name: string; mimeType: string },
+): Promise<{ url: string; maxAge: number }> {
+  const now = Math.floor(Date.now() / 1000);
+  const windowStart = now - (now % THUMBNAIL_WINDOW);
+  const url = await getSignedUrl(storage, getCommand(key, file, "inline", 2 * THUMBNAIL_WINDOW), {
+    expiresIn: 2 * THUMBNAIL_WINDOW,
+    signingDate: new Date(windowStart * 1000),
+  });
+  // Until the window ends, the redirect (and so the image) can come from the browser's cache.
+  return { url, maxAge: windowStart + THUMBNAIL_WINDOW - now };
+}
+
+function getCommand(
+  key: string,
+  file: { name: string; mimeType: string },
+  disposition: Disposition,
+  cacheSeconds: number,
+): GetObjectCommand {
   const { contentType, contentDisposition } = responseHeaders(
     file.mimeType,
     file.name,
     disposition,
   );
-  const command = new GetObjectCommand({
+  return new GetObjectCommand({
     Bucket: env.STORAGE_BUCKET,
     Key: key,
     ResponseContentType: contentType,
     ResponseContentDisposition: contentDisposition,
-    ResponseCacheControl: "private, max-age=60",
+    ResponseCacheControl: `private, max-age=${String(Math.min(cacheSeconds, 600))}`,
   });
-  return getSignedUrl(storage, command, { expiresIn: DOWNLOAD_URL_TTL });
 }
 
 /** What storage holds under a key, or null if nothing arrived. */

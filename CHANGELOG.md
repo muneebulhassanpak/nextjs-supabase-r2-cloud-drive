@@ -7,6 +7,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-14
+
+### Added
+
+- Preview files without downloading them: double-click a file (tap on a phone), or choose Preview from its menu. Step through the folder's files with ← and → or the arrow buttons; Esc closes.
+- Images fit the screen and can be shown at actual size; PDFs open in the browser's viewer (phones that can't show them offer to open the PDF on its own); videos and audio play in the browser's own players.
+- Text and code show with line numbers and syntax highlighting that follows the light or dark theme. Long files show their first 1 MB.
+- Image thumbnails in grid view.
+- A file kept open for a moment goes to the top of Recent (stepping past one with the arrow keys doesn't count).
+- `pnpm seed:files` fills a local account with a file of every previewable type.
+
+### Security
+
+- HTML, SVG and XML files are shown only as their source text, never rendered, so their scripts can't run. Code is highlighted by building elements from tokens, never by inserting HTML.
+- Links for playing audio and video and for reading PDFs last 30 minutes, so they keep working while people watch and scroll; every other link still lasts 60 seconds.
+
 ## [0.5.0] - 2026-11-14
 
 ### Added

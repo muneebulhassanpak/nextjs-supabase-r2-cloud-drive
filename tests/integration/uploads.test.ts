@@ -10,7 +10,7 @@ import {
   saveAvatar,
   startAvatarUpload,
 } from "@/server/services/avatars";
-import { getFileUrl } from "@/server/services/files";
+import { getFileUrl, getThumbnailUrl, recordRecent } from "@/server/services/files";
 import { cancelUpload, completeUpload, startUpload } from "@/server/services/uploads";
 import { storage } from "@/server/storage/client";
 
@@ -334,6 +334,70 @@ describe("downloading (T3)", () => {
       type: "text/plain",
     });
     expect(await errorOf(getFileUrl(pending.id, "attachment"))).toMatchObject({ status: 404 });
+  });
+});
+
+describe("previews", () => {
+  let owner: User, stranger: User;
+  let textId: string, imageId: string, videoId: string, pdfId: string;
+
+  beforeAll(async () => {
+    [owner, stranger] = await Promise.all([newUser("preview-owner"), newUser("preview-stranger")]);
+    as(owner);
+    textId = (await upload("long.txt", "0123456789".repeat(10))).id;
+    imageId = (await upload("dot.png", "png bytes", null, "image/png")).id;
+    videoId = (await upload("clip.webm", "webm bytes", null, "video/webm")).id;
+    pdfId = (await upload("doc.pdf", "%PDF-1.4", null, "application/pdf")).id;
+  });
+
+  it("reads just the start of a text file with a range request", async () => {
+    as(owner);
+    const { url } = await getFileUrl(textId, "inline");
+    const response = await fetch(url, { headers: { range: "bytes=0-9" } });
+    expect(response.status).toBe(206);
+    expect(await response.text()).toBe("0123456789");
+  });
+
+  it("keeps links for playing media alive long enough to watch, and downloads short", async () => {
+    as(owner);
+    expect((await getFileUrl(videoId, "inline")).expiresIn).toBe(30 * 60);
+    expect((await getFileUrl(videoId, "attachment")).expiresIn).toBe(60);
+    expect((await getFileUrl(imageId, "inline")).expiresIn).toBe(60);
+    expect((await getFileUrl(pdfId, "inline")).expiresIn).toBe(30 * 60);
+  });
+
+  it("has thumbnails for images only, and only for people who can see them", async () => {
+    as(owner);
+    const first = await getThumbnailUrl(imageId);
+    const thumbnail = await fetch(first.url);
+    expect(thumbnail.headers.get("content-type")).toBe("image/png");
+    // The same link within a window, so the browser can reuse the image it has.
+    expect((await getThumbnailUrl(imageId)).url).toBe(first.url);
+    expect(first.maxAge).toBeGreaterThan(0);
+    expect(first.maxAge).toBeLessThanOrEqual(600);
+    expect(await errorOf(getThumbnailUrl(textId))).toMatchObject({ status: 404 });
+    as(stranger);
+    expect(await errorOf(getThumbnailUrl(imageId))).toMatchObject({ status: 404 });
+  });
+
+  it("puts opened files at the top of Recents, once each", async () => {
+    as(owner);
+    const recents = async () => {
+      const { data } = await owner.client
+        .from("recents")
+        .select("item_id, touched_at")
+        .order("touched_at", { ascending: false });
+      return data ?? [];
+    };
+    await recordRecent(textId);
+    await recordRecent(imageId);
+    expect((await recents()).map((r) => r.item_id)).toEqual([imageId, textId]);
+    await recordRecent(textId);
+    expect((await recents()).map((r) => r.item_id)).toEqual([textId, imageId]);
+
+    as(stranger);
+    expect(await errorOf(recordRecent(textId))).toMatchObject({ status: 404 });
+    expect(await errorOf(recordRecent(crypto.randomUUID()))).toMatchObject({ status: 404 });
   });
 });
 

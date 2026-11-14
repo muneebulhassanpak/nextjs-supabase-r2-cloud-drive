@@ -18,6 +18,7 @@ Needs Node.js 22, pnpm 10 and Docker. No accounts or API keys.
 ```bash
 pnpm install
 pnpm db:start   # local Supabase + S3 storage in Docker
+pnpm seed:files # optional: sign in as ava@demo.dev / demo-pass-123 to try every file type
 pnpm dev        # http://localhost:3000
 ```
 
