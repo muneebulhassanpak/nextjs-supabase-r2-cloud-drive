@@ -25,7 +25,8 @@ select lives_ok(format('select public.trash_item(%L)', tests.id('f2')), 'editor 
 select lives_ok(format('select public.trash_item(%L)', tests.id('Sub')), 'editor trashes a subfolder');
 select tests.clear_authentication();
 select is(
-  tests.rows($$select tests.label(id) || '>' || tests.label(trash_root) from public.items where trashed_at is not null$$),
+  tests.rows($$select tests.label(id) || '>' || tests.label(trash_root) from public.items
+    where trashed_at is not null and id in (select id from tests.ids)$$),
   tests.sorted('{Deep>Sub,Sub>Sub,f2>f2,f4>Sub,t1>t1}'),
   'everything inside goes with the folder; f2 keeps its own trash entry');
 select is((select trashed_by from public.items where id = tests.id('Sub')), tests.id('editor'), 'it records who trashed it');
@@ -59,7 +60,8 @@ select throws_ok(format('select public.restore_item(%L)', tests.id('Sub')), 'P00
 select tests.authenticate_as('editor');
 select lives_ok(format('select public.restore_item(%L)', tests.id('Sub')), 'editor restores the folder');
 select tests.clear_authentication();
-select is(tests.rows('select tests.label(id) from public.items where trashed_at is not null'), tests.sorted('{f2,t1}'),
+select is(tests.rows('select tests.label(id) from public.items where trashed_at is not null and id in (select id from tests.ids)'),
+  tests.sorted('{f2,t1}'),
   'what went in with the folder comes back; f2 was trashed on its own and stays in the trash');
 select ok(
   not exists (
