@@ -4,7 +4,7 @@
       "allowed": {
         "origins": ["https://lockerly.heymuneeb.dev"],
         "methods": ["PUT", "GET"],
-        "headers": ["content-type"]
+        "headers": ["content-type", "range"]
       },
       "maxAgeSeconds": 3600
     }

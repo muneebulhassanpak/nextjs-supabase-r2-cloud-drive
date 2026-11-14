@@ -57,7 +57,7 @@ const cors = new PutBucketCorsCommand({
       {
         AllowedOrigins: ["http://localhost:3000", "http://localhost:3100"],
         AllowedMethods: ["PUT", "GET"],
-        AllowedHeaders: ["content-type"],
+        AllowedHeaders: ["content-type", "range"],
         MaxAgeSeconds: 3600,
       },
     ],
