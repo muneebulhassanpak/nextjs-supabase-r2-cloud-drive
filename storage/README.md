@@ -1,7 +1,8 @@
 # Storage settings
 
 Browsers upload and download file bytes straight to the bucket with signed links, so each bucket
-lets the app's own site (and nothing else) send `PUT` and `GET` requests:
+lets the app's own site (and nothing else) send `PUT` and `GET` requests. The only headers it may
+send are `content-type` (uploads) and `range` (text previews read just the first 1 MB):
 
 | File                      | Bucket             | Allowed site                           |
 | ------------------------- | ------------------ | -------------------------------------- |
