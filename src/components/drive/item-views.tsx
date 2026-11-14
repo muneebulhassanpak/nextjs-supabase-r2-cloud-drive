@@ -1,9 +1,12 @@
 "use client";
 
 import { EllipsisVertical } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { DriveItem } from "@/lib/drive/types";
+import { thumbnailSrc } from "@/lib/files/api";
+import { hasThumbnail } from "@/lib/files/preview";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -172,7 +175,7 @@ export function GridView(props: ViewProps) {
                     role="gridcell"
                     className="mb-1 grid aspect-[4/3] place-items-center rounded-lg bg-muted"
                   >
-                    <ItemIcon item={item} className="size-10" />
+                    <TilePicture item={item} />
                   </div>
                 )}
                 <div role="gridcell" className="flex min-w-0 items-center gap-2 pl-2">
@@ -193,5 +196,25 @@ export function GridView(props: ViewProps) {
       {section("Folders", folders)}
       {section("Files", files)}
     </div>
+  );
+}
+
+/** An image file's picture (loaded only when scrolled into view), or the icon for its type. */
+function TilePicture({ item }: { item: DriveItem }) {
+  const [failed, setFailed] = useState(false);
+  if (failed || !hasThumbnail(item)) return <ItemIcon item={item} className="size-10" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a redirect to a signed storage link
+    <img
+      src={thumbnailSrc(item.id)}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      onError={() => {
+        setFailed(true);
+      }}
+      className="size-full rounded-lg object-cover"
+    />
   );
 }
