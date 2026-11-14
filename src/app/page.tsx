@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { DemoCarousel } from "@/components/marketing/demo-carousel";
 import {
   DriveMockup,
   PreviewMockup,
@@ -23,6 +24,7 @@ import {
 import { Container, Eyebrow, IconChip, Panel, SectionIntro } from "@/components/marketing/section";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
+import { StackGrid } from "@/components/marketing/stack-grid";
 import { TextLink } from "@/components/text-link";
 import { buttonVariants } from "@/components/ui/button";
 import { FolderCard } from "@/components/ui/folder-card";
@@ -31,8 +33,6 @@ import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 const REPO = "https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive";
-
-const STACK = ["Next.js", "Supabase", "PostgreSQL", "Cloudflare R2", "Vercel"];
 
 const REASONS = [
   {
@@ -123,21 +123,33 @@ export default function HomePage() {
       <main className="flex-1">
         <Hero />
 
-        <Container className="py-12">
-          <div className="flex reveal flex-col items-center gap-x-12 gap-y-4 sm:flex-row sm:justify-between">
-            <p className="text-sm text-muted-foreground">Built on</p>
-            <ul className="flex flex-wrap justify-center gap-x-10 gap-y-3">
-              {STACK.map((name) => (
-                <li
-                  key={name}
-                  className="text-lg font-semibold tracking-tight text-muted-foreground/80"
-                >
-                  {name}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Container>
+        <section aria-labelledby="stack-heading" className="py-16 sm:py-20">
+          <Container className="grid gap-12">
+            <SectionIntro
+              id="stack-heading"
+              align="center"
+              eyebrow="Built with"
+              title="A modern, well-tested stack"
+              description="Every piece is a widely used, production-grade tool, so Lockerly is easy to run, extend and hand over."
+            />
+            <StackGrid />
+          </Container>
+        </section>
+
+        <section aria-labelledby="demo-heading" className="py-16 sm:py-24">
+          <Container className="grid gap-12">
+            <SectionIntro
+              id="demo-heading"
+              align="center"
+              eyebrow="See it in action"
+              title="Recorded in the real app"
+              description="Not mock-ups: a script drives Lockerly in a browser and records what you'd see."
+            />
+            <Panel glow="none" className="sm:py-14">
+              <DemoCarousel />
+            </Panel>
+          </Container>
+        </section>
 
         <section
           id="features"
