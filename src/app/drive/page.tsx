@@ -1,19 +1,39 @@
-import { FolderOpen } from "lucide-react";
+import { Suspense } from "react";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { PageHeader } from "@/components/app/page-header";
+import { BrowserSkeleton } from "@/components/drive/browser-skeleton";
+import { FolderBrowser } from "@/components/drive/folder-browser";
+import { parseSort } from "@/lib/drive/sort";
+import { getMyDriveRoot } from "@/server/services/drive";
+import { getMyProfile } from "@/server/services/profile";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "My Drive" };
 
-export default function MyDrivePage() {
+async function MyDrive({ searchParams }: { searchParams: PageProps<"/drive">["searchParams"] }) {
+  const [root, profile, params] = await Promise.all([
+    getMyDriveRoot(),
+    getMyProfile(),
+    searchParams,
+  ]);
   return (
-    <>
-      <PageHeader title="My Drive" />
-      <EmptyState icon={FolderOpen} title="Your drive is empty">
-        Files and folders you add will show up here.
-      </EmptyState>
-    </>
+    <FolderBrowser
+      folder={null}
+      items={root.items}
+      crumbs={[]}
+      sharedRoot={false}
+      sort={parseSort(params)}
+      view={profile.driveView}
+      canEdit
+      currentUserId={profile.id}
+    />
+  );
+}
+
+export default function MyDrivePage({ searchParams }: PageProps<"/drive">) {
+  return (
+    <Suspense fallback={<BrowserSkeleton />}>
+      <MyDrive searchParams={searchParams} />
+    </Suspense>
   );
 }

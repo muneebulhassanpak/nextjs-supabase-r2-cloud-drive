@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 
+import type { DriveView } from "@/lib/drive/types";
 import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
 
@@ -8,6 +9,7 @@ export interface Profile {
   id: string;
   email: string;
   fullName: string | null;
+  driveView: DriveView | null;
   storageUsed: number;
   storageQuota: number;
 }
@@ -18,7 +20,7 @@ export const getMyProfile = cache(async (): Promise<Profile> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("email, full_name, storage_used, storage_quota")
+    .select("email, full_name, drive_view, storage_used, storage_quota")
     .eq("id", user.id)
     .single();
   if (error) throw error;
@@ -26,6 +28,7 @@ export const getMyProfile = cache(async (): Promise<Profile> => {
     id: user.id,
     email: data.email,
     fullName: data.full_name,
+    driveView: data.drive_view,
     storageUsed: data.storage_used,
     storageQuota: data.storage_quota,
   };
