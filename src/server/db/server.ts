@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import { env } from "@/env";
 import type { Database } from "@/server/db/database.types";
@@ -10,6 +11,9 @@ import type { Database } from "@/server/db/database.types";
  * user (their JWT from the session cookie), so every query goes through row-level security.
  */
 export async function createClient() {
+  // Supabase Auth reads the clock (token expiry) as soon as the client exists. Wait for the real
+  // request, so Next.js never runs that during a prerender (including runtime prefetches).
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
@@ -26,8 +30,8 @@ export async function createClient() {
               cookieStore.set(name, value, options);
             }
           } catch {
-            // Server Components can't set cookies. Refreshing the session in the proxy, so rotated
-            // tokens are always written back, comes with sign-in (Phase 03).
+            // Server Components can't set cookies. That's fine: src/proxy.ts refreshes the session
+            // before every request, so there is nothing new to write here.
           }
         },
       },
