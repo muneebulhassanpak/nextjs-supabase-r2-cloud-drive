@@ -10,6 +10,7 @@ export interface Profile {
   email: string;
   fullName: string | null;
   driveView: DriveView | null;
+  avatarKey: string | null;
   storageUsed: number;
   storageQuota: number;
 }
@@ -20,7 +21,7 @@ export const getMyProfile = cache(async (): Promise<Profile> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("email, full_name, drive_view, storage_used, storage_quota")
+    .select("email, full_name, drive_view, avatar_key, storage_used, storage_quota")
     .eq("id", user.id)
     .single();
   if (error) throw error;
@@ -29,6 +30,7 @@ export const getMyProfile = cache(async (): Promise<Profile> => {
     email: data.email,
     fullName: data.full_name,
     driveView: data.drive_view,
+    avatarKey: data.avatar_key,
     storageUsed: data.storage_used,
     storageQuota: data.storage_quota,
   };
