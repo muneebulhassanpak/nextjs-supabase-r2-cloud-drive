@@ -137,6 +137,15 @@ test("a session from a password sign-in can't set a new password", async ({ page
   await expect(page.getByText("Your reset link has expired. Ask for a new one.")).toBeVisible();
 });
 
+test("the password can be shown while typing it", async ({ page }) => {
+  await page.goto("/sign-in");
+  await field(page, "Password").fill("not-a-secret");
+  await page.getByRole("button", { name: "Show password" }).click();
+  await expect(field(page, "Password")).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Hide password" }).click();
+  await expect(field(page, "Password")).toHaveAttribute("type", "password");
+});
+
 test("a used or broken email link explains what happened", async ({ page }) => {
   await page.goto("/auth/confirm?token_hash=not-a-real-token&type=email&next=/drive");
   await expect(page).toHaveURL(/\/auth\/error$/);

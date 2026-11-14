@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TextLink } from "@/components/text-link";
 
 import { AuthCard } from "../auth-card";
 import { SignInForm } from "./sign-in-form";
@@ -14,13 +14,7 @@ export default function SignInPage() {
       description="Sign in to your Lockerly account."
       footer={
         <>
-          New to Lockerly?{" "}
-          <Link
-            href="/sign-up"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            Create an account
-          </Link>
+          New to Lockerly? <TextLink href="/sign-up">Create an account</TextLink>
         </>
       }
     >

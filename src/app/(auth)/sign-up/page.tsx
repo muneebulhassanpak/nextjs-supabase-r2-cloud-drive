@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TextLink } from "@/components/text-link";
 
 import { AuthCard } from "../auth-card";
 import { SignUpForm } from "./sign-up-form";
@@ -14,13 +14,7 @@ export default function SignUpPage() {
       description="100 MB of free storage. We'll email you a link to confirm your address."
       footer={
         <>
-          Already have an account?{" "}
-          <Link
-            href="/sign-in"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            Sign in
-          </Link>
+          Already have an account? <TextLink href="/sign-in">Sign in</TextLink>
         </>
       }
     >
