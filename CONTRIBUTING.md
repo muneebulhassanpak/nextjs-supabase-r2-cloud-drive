@@ -90,6 +90,21 @@ pnpm exec supabase config push --remote=<project-ref>
 
 > Never put staging or production keys in `.env.local`. Local commands would then act on real data.
 
+### File storage
+
+Browsers send and fetch file bytes straight to the bucket with short-lived signed links; the app
+only signs them after the database has allowed the request. So each bucket must accept `PUT` and
+`GET` from the app's own site. `pnpm db:start` sets this up for the local bucket; the rules for the
+R2 buckets live in `storage/` (see its README).
+
+A daily job (`/api/cron/cleanup-storage`, scheduled in `vercel.json`) removes uploads abandoned
+for a day and objects no file or profile picture points at. To run it locally, set `CRON_SECRET`
+and `SUPABASE_SECRET_KEY` (from `pnpm exec supabase status`) in `.env.local`, then:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/cleanup-storage
+```
+
 ## Checks
 
 The same commands CI runs:
