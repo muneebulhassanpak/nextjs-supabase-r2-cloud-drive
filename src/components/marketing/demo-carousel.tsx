@@ -35,8 +35,6 @@ const DEMOS = [
 const THEMES = ["light", "dark"] as const;
 type Theme = (typeof THEMES)[number];
 
-const visible = (video: HTMLVideoElement) => video.offsetParent !== null;
-
 /**
  * The clips, one at a time: each plays through and hands over to the next, like a looping GIF
  * that tells a story. Each clip exists in both themes and the page's theme picks which one shows.
@@ -49,6 +47,9 @@ export function DemoCarousel() {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const { resolvedTheme } = useTheme();
+  // Which recording the page shows. Read from the theme, not the page: next-themes updates the
+  // page's class after this component's effects run.
+  const shown: Theme = resolvedTheme === "dark" ? "dark" : "light";
   const videos = useRef<Record<Theme, (HTMLVideoElement | null)[]>>({ light: [], dark: [] });
   const root = useRef<HTMLDivElement>(null);
   const onScreen = useRef(false);
@@ -77,7 +78,7 @@ export function DemoCarousel() {
     for (const theme of THEMES) {
       videos.current[theme].forEach((video, index) => {
         if (!video) return;
-        if (run && index === current && visible(video)) {
+        if (run && index === current && theme === shown) {
           void video.play().catch(() => {
             // Autoplay refused (a power-saving mode, say): offer the play button instead.
             held.current = true;
@@ -89,7 +90,11 @@ export function DemoCarousel() {
       });
     }
     setPlaying(run);
-  }, [current]);
+  }, [current, shown]);
+  const syncRef = useRef(sync);
+  useEffect(() => {
+    syncRef.current = sync;
+  }, [sync]);
 
   // A newly shown clip starts from the top.
   useEffect(() => {
@@ -97,21 +102,18 @@ export function DemoCarousel() {
       const video = videos.current[theme][current];
       if (video) video.currentTime = 0;
     }
-    sync();
-  }, [current, sync]);
+    syncRef.current();
+  }, [current]);
 
   // The theme changed: carry on from the same moment in the other recording.
   useEffect(() => {
-    const light = videos.current.light[current];
-    const dark = videos.current.dark[current];
-    if (light && dark) {
-      const [shown, hidden] = visible(light) ? [light, dark] : [dark, light];
-      shown.currentTime = hidden.currentTime;
-    }
-    sync();
+    const next = videos.current[shown][current];
+    const previous = videos.current[shown === "dark" ? "light" : "dark"][current];
+    if (next && previous) next.currentTime = previous.currentTime;
+    syncRef.current();
     // `current` is read, not watched: changing clips is handled above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedTheme]);
+  }, [shown]);
 
   // Play only while the carousel is on screen.
   useEffect(() => {
@@ -120,7 +122,7 @@ export function DemoCarousel() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         onScreen.current = entry?.isIntersecting ?? false;
-        sync();
+        syncRef.current();
       },
       { threshold: 0.4 },
     );
@@ -128,16 +130,16 @@ export function DemoCarousel() {
     return () => {
       observer.disconnect();
     };
-  }, [sync]);
+  }, []);
 
   function toggle() {
     held.current = !held.current;
     sync();
   }
 
-  function onTimeUpdate(index: number, event: SyntheticEvent<HTMLVideoElement>) {
+  function onTimeUpdate(theme: Theme, index: number, event: SyntheticEvent<HTMLVideoElement>) {
     const video = event.currentTarget;
-    if (index !== current || !visible(video) || !video.duration) return;
+    if (index !== current || theme !== shown || !video.duration) return;
     setProgress(video.currentTime / video.duration);
   }
 
@@ -206,13 +208,13 @@ export function DemoCarousel() {
                         poster={`/demos/${file}.jpg`}
                         muted
                         playsInline
-                        preload={index === 0 ? "auto" : "metadata"}
+                        preload={index === 0 && theme === shown ? "auto" : "metadata"}
                         aria-label={`${demo.title} in Lockerly: ${demo.description}`}
                         onTimeUpdate={(event) => {
-                          onTimeUpdate(index, event);
+                          onTimeUpdate(theme, index, event);
                         }}
-                        onEnded={(event) => {
-                          if (visible(event.currentTarget)) api?.scrollNext();
+                        onEnded={() => {
+                          if (theme === shown) api?.scrollNext();
                         }}
                       >
                         <source src={`/demos/${file}.webm`} type="video/webm" />
