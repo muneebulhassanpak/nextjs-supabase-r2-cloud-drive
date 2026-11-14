@@ -9,6 +9,7 @@ import { StorageMeter, StorageMeterSkeleton } from "@/components/app/storage-met
 import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
+import { Toaster } from "@/components/ui/sonner";
 
 /**
  * The signed-in app: sidebar, top bar, then the page. The frame is static, so it shows at once;
@@ -58,6 +59,7 @@ export default function DriveLayout({ children }: LayoutProps<"/drive">) {
         </header>
         <main className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</main>
       </div>
+      <Toaster position="bottom-center" />
     </div>
   );
 }

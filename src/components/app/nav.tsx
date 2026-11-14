@@ -3,6 +3,7 @@
 import { Clock, HardDrive, Star, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -21,13 +22,31 @@ function activeHref(pathname: string): string | undefined {
     .sort((a, b) => b.length - a.length)[0];
 }
 
-/** The main sections of the app. Used in the sidebar and in the phone menu. */
-export function Nav({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname();
+interface NavProps {
+  onNavigate?: () => void;
+}
+
+/**
+ * The main sections of the app. Used in the sidebar and in the phone menu. The current path isn't
+ * known while prerendering a dynamic route, so the links show first and the highlight follows.
+ */
+export function Nav(props: NavProps) {
+  return (
+    <Suspense fallback={<NavLinks {...props} />}>
+      <CurrentNav {...props} />
+    </Suspense>
+  );
+}
+
+function CurrentNav(props: NavProps) {
+  return <NavLinks {...props} active={activeHref(usePathname())} />;
+}
+
+function NavLinks({ onNavigate, active: activeItem }: NavProps & { active?: string | undefined }) {
   return (
     <nav aria-label="Drive" className="grid gap-1">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-        const active = href === activeHref(pathname);
+        const active = href === activeItem;
         return (
           <Link
             key={href}
