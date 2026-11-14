@@ -2,21 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { field, signInAsNewUser } from "./support";
 import { newUser } from "../tests/support/local-stack";
 
-const field = (page: Page, label: string) =>
-  page.getByLabel(label, { exact: true }).filter({ visible: true });
 const row = (page: Page, name: string) => page.getByRole("row", { name, exact: true });
-
-async function signInAsNewUser(page: Page) {
-  const user = await newUser("e2e-folders");
-  await page.goto("/sign-in");
-  await field(page, "Email").fill(user.email);
-  await field(page, "Password").fill(user.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "My Drive" })).toBeVisible();
-  return user;
-}
 
 async function newFolder(page: Page, name: string) {
   await page.getByRole("button", { name: "New", exact: true }).click();
@@ -41,7 +30,7 @@ async function menuAction(page: Page, item: string, action: string, isMobile: bo
 }
 
 test("build a folder tree, find your way back with breadcrumbs", async ({ page, isMobile }) => {
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-folders");
   await expect(page.getByText("Your drive is empty")).toBeVisible();
 
   await newFolder(page, "Projects");
@@ -67,7 +56,7 @@ test("build a folder tree, find your way back with breadcrumbs", async ({ page, 
 });
 
 test("rename and trash, with clashing names caught before saving", async ({ page, isMobile }) => {
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-folders");
   await newFolder(page, "Drafts");
   await newFolder(page, "Final");
 
@@ -91,7 +80,7 @@ test("rename and trash, with clashing names caught before saving", async ({ page
 });
 
 test("the suggested name works, and keys pressed in a menu stay in the menu", async ({ page }) => {
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-folders");
   await page.getByRole("button", { name: "New", exact: true }).click();
   await page.getByRole("menuitem", { name: "New folder" }).click();
   await page.getByRole("button", { name: "Create" }).click();
@@ -107,7 +96,7 @@ test("the suggested name works, and keys pressed in a menu stay in the menu", as
 });
 
 test("grid or list is remembered; sorting is in the address", async ({ page }) => {
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-folders");
   await newFolder(page, "b folder 10");
   await newFolder(page, "B folder 2");
 
@@ -128,7 +117,7 @@ test("grid or list is remembered; sorting is in the address", async ({ page }) =
 
 test("select several with the keyboard and mouse, then trash them", async ({ page, isMobile }) => {
   test.skip(isMobile, "selection with modifier keys is a desktop feature");
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-folders");
   for (const name of ["A", "B", "C", "D"]) await newFolder(page, name);
 
   await row(page, "A").click();
@@ -165,7 +154,7 @@ test("a folder you can't see looks the same as one that doesn't exist", async ({
     .single();
   if (error) throw error;
 
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-folders");
   await page.goto(`/drive/folders/${data.id}`);
   await expect(page.getByRole("heading", { name: "We couldn't find that folder" })).toBeVisible();
   await page.goto(`/drive/folders/${randomUUID()}`);

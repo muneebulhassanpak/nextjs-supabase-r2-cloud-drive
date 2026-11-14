@@ -1,25 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { adminClient, newUser } from "../tests/support/local-stack";
+import { field, signInAsNewUser } from "./support";
+import { adminClient } from "../tests/support/local-stack";
 
 // Uploads and downloads in a real browser: bytes go from the page straight to the local S3 server
 // through signed links, as they go to R2 on staging and production.
 
-const field = (page: Page, label: string) =>
-  page.getByLabel(label, { exact: true }).filter({ visible: true });
 const row = (page: Page, name: string) =>
   page.getByRole("row", { name, exact: true }).filter({ visible: true });
 const panel = (page: Page) => page.getByRole("region", { name: "Uploads" });
-
-async function signInAsNewUser(page: Page) {
-  const user = await newUser("e2e-uploads");
-  await page.goto("/sign-in");
-  await field(page, "Email").fill(user.email);
-  await field(page, "Password").fill(user.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "My Drive" })).toBeVisible();
-  return user;
-}
 
 const text = (name: string, content: string) => ({
   name,
@@ -36,7 +25,7 @@ async function chooseFiles(page: Page, files: Parameters<Page["setInputFiles"]>[
 }
 
 test("upload several files, see them arrive, and download one", async ({ page, isMobile }) => {
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-uploads");
   await chooseFiles(page, [
     text("notes.txt", "first notes"),
     text("todo.txt", "buy milk"),
@@ -72,7 +61,7 @@ test("upload several files, see them arrive, and download one", async ({ page, i
 });
 
 test("files over 25 MB and over the quota are refused with a reason", async ({ page }) => {
-  const user = await signInAsNewUser(page);
+  const user = await signInAsNewUser(page, "e2e-uploads");
   await adminClient().from("profiles").update({ storage_quota: 1000 }).eq("id", user.id);
 
   await chooseFiles(page, [
@@ -96,7 +85,7 @@ test("a long file name wraps in the details panel instead of widening the page",
   isMobile,
 }) => {
   test.skip(isMobile, "the details panel is a sheet on phones");
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-uploads");
   const name = `${"A very long file name that keeps going ".repeat(4).trim()}.md`;
   await chooseFiles(page, [text(name, "# notes")]);
   await row(page, name).click();
@@ -111,7 +100,7 @@ test("a long file name wraps in the details panel instead of widening the page",
 
 test("drop files onto a folder to upload them there", async ({ page, isMobile }) => {
   test.skip(isMobile, "dragging files in is a desktop feature");
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-uploads");
   await page.getByRole("button", { name: "New", exact: true }).click();
   await page.getByRole("menuitem", { name: "New folder" }).click();
   await field(page, "Name").fill("Inbox");
@@ -135,7 +124,7 @@ test("drop files onto a folder to upload them there", async ({ page, isMobile })
 });
 
 test("set and remove a profile picture", async ({ page }) => {
-  await signInAsNewUser(page);
+  await signInAsNewUser(page, "e2e-uploads");
   await page.goto("/drive/settings");
   await expect(page.getByRole("button", { name: "Add picture" })).toBeVisible();
   const chooser = page.waitForEvent("filechooser");
