@@ -74,6 +74,7 @@ select is(
     'complete_upload(uuid)',
     'delete_forever(uuid)',
     'empty_trash()',
+    'item_access_role(uuid)',
     'move_item(uuid,uuid)',
     'ping()',
     'resolve_share_link(text)',

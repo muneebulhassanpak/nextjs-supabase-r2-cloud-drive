@@ -103,14 +103,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "avatar_url": string | null,"created_at": string,"email": string,"full_name": string | null,"id": string,"is_demo": boolean,"storage_quota": number,"storage_used": number,"updated_at": string
+                    "avatar_url": string | null,"created_at": string,"drive_view": Database["public"]['Enums']["drive_view"] | null,"email": string,"full_name": string | null,"id": string,"is_demo": boolean,"storage_quota": number,"storage_used": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar_url"?: string | null,"created_at"?: string,"email": string,"full_name"?: string | null,"id": string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
+                    "avatar_url"?: string | null,"created_at"?: string,"drive_view"?: Database["public"]['Enums']["drive_view"] | null,"email": string,"full_name"?: string | null,"id": string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "avatar_url"?: string | null,"created_at"?: string,"email"?: string,"full_name"?: string | null,"id"?: string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
+                    "avatar_url"?: string | null,"created_at"?: string,"drive_view"?: Database["public"]['Enums']["drive_view"] | null,"email"?: string,"full_name"?: string | null,"id"?: string,"is_demo"?: boolean,"storage_quota"?: number,"storage_used"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -240,6 +240,9 @@ isOneToOne: false
 "empty_trash":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
+"item_access_role":
+{ Args: { "p_item_id": string }; Returns: Database["public"]['Enums']["access_role"]
+                           },
 "move_item":
 { Args: { "p_item_id": string,"p_parent_id": string }; Returns: undefined
                            },
@@ -306,7 +309,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "access_role": "viewer"|"editor"|"owner","activity_action": "created"|"uploaded"|"renamed"|"moved"|"trashed"|"restored"|"shared"|"share_changed"|"unshared"|"link_created"|"link_revoked","item_category": "image"|"video"|"audio"|"pdf"|"document"|"spreadsheet"|"presentation"|"text"|"archive"|"other","item_kind": "folder"|"file","item_status": "pending"|"ready","share_role": "viewer"|"editor"
+            "access_role": "viewer"|"editor"|"owner","activity_action": "created"|"uploaded"|"renamed"|"moved"|"trashed"|"restored"|"shared"|"share_changed"|"unshared"|"link_created"|"link_revoked","drive_view": "grid"|"list","item_category": "image"|"video"|"audio"|"pdf"|"document"|"spreadsheet"|"presentation"|"text"|"archive"|"other","item_kind": "folder"|"file","item_status": "pending"|"ready","share_role": "viewer"|"editor"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -422,7 +425,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "access_role": ["viewer", "editor", "owner"],"activity_action": ["created", "uploaded", "renamed", "moved", "trashed", "restored", "shared", "share_changed", "unshared", "link_created", "link_revoked"],"item_category": ["image", "video", "audio", "pdf", "document", "spreadsheet", "presentation", "text", "archive", "other"],"item_kind": ["folder", "file"],"item_status": ["pending", "ready"],"share_role": ["viewer", "editor"]
+            "access_role": ["viewer", "editor", "owner"],"activity_action": ["created", "uploaded", "renamed", "moved", "trashed", "restored", "shared", "share_changed", "unshared", "link_created", "link_revoked"],"drive_view": ["grid", "list"],"item_category": ["image", "video", "audio", "pdf", "document", "spreadsheet", "presentation", "text", "archive", "other"],"item_kind": ["folder", "file"],"item_status": ["pending", "ready"],"share_role": ["viewer", "editor"]
           }
         }
 } as const
