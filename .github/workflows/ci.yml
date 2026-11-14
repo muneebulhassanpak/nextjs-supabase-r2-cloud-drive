@@ -31,6 +31,14 @@ jobs:
             echo "::error::SUPABASE_SECRET_KEY bypasses row-level security. Only src/server/db/admin.ts may use it: $found"
             exit 1
           fi
+      - name: Only scheduled jobs may use the admin client
+        run: |
+          # Any import of it, by alias or relative path ("@/server/db/admin", "../db/admin").
+          found=$(grep -rlE "[\"'][^\"']*db/admin[\"']" src | grep -v -e '^src/server/jobs/' -e '^src/server/db/admin.ts$' || true)
+          if [ -n "$found" ]; then
+            echo "::error::The admin client bypasses row-level security. Only src/server/jobs/ may import it: $found"
+            exit 1
+          fi
 
   typecheck:
     runs-on: ubuntu-latest
