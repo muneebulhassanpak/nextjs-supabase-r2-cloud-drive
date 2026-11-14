@@ -342,6 +342,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const details = (
     <DetailsPanel
       item={detailsItem}
+      selectedCount={selected.length}
       location={location}
       currentUserId={currentUserId}
       onClose={() => {
