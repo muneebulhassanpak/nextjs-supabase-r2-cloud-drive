@@ -13,6 +13,7 @@ export function ForgotPasswordForm() {
     <form action={action} className="grid gap-4" noValidate>
       <FormError message={failed?.error.fieldErrors ? undefined : failed?.error.message} />
       <Field
+        inputSize="lg"
         label="Email"
         name="email"
         type="email"

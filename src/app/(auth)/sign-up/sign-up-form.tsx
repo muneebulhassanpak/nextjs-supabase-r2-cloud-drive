@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { Field, FormError, SubmitButton } from "@/components/form";
+import { Field, FormError, PasswordField, SubmitButton } from "@/components/form";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/schemas";
 
 import { signUp } from "../actions";
@@ -14,6 +14,7 @@ export function SignUpForm() {
     <form action={action} className="grid gap-4" noValidate>
       <FormError message={failed?.error.fieldErrors ? undefined : failed?.error.message} />
       <Field
+        inputSize="lg"
         label="Name"
         name="fullName"
         autoComplete="name"
@@ -23,6 +24,7 @@ export function SignUpForm() {
         errors={failed?.error.fieldErrors?.fullName}
       />
       <Field
+        inputSize="lg"
         label="Email"
         name="email"
         type="email"
@@ -31,10 +33,10 @@ export function SignUpForm() {
         defaultValue={failed?.values?.email}
         errors={failed?.error.fieldErrors?.email}
       />
-      <Field
+      <PasswordField
+        inputSize="lg"
         label="Password"
         name="password"
-        type="password"
         autoComplete="new-password"
         required
         minLength={PASSWORD_MIN_LENGTH}

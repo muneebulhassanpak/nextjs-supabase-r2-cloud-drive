@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useActionState } from "react";
 
-import { Field, FormError, SubmitButton } from "@/components/form";
+import { Field, FormError, PasswordField, SubmitButton } from "@/components/form";
+import { TextLink } from "@/components/text-link";
 
 import { signIn } from "../actions";
 
@@ -24,6 +24,7 @@ export function SignInForm() {
       </Suspense>
       <FormError message={failed?.error.fieldErrors ? undefined : failed?.error.message} />
       <Field
+        inputSize="lg"
         label="Email"
         name="email"
         type="email"
@@ -32,22 +33,19 @@ export function SignInForm() {
         defaultValue={failed?.values?.email}
         errors={failed?.error.fieldErrors?.email}
       />
-      <div className="grid gap-2">
-        <Field
-          label="Password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          errors={failed?.error.fieldErrors?.password}
-        />
-        <Link
-          href="/forgot-password"
-          className="justify-self-end text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Forgot your password?
-        </Link>
-      </div>
+      <PasswordField
+        inputSize="lg"
+        label="Password"
+        name="password"
+        autoComplete="current-password"
+        required
+        errors={failed?.error.fieldErrors?.password}
+        action={
+          <TextLink href="/forgot-password" tone="muted" className="text-sm">
+            Forgot your password?
+          </TextLink>
+        }
+      />
       <SubmitButton pending={pending}>Sign in</SubmitButton>
     </form>
   );

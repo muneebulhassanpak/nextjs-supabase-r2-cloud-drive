@@ -1,6 +1,7 @@
 import { MailCheck } from "lucide-react";
-import Link from "next/link";
 import { Suspense } from "react";
+
+import { TextLink } from "@/components/text-link";
 
 import { AuthCard } from "../auth-card";
 import { CheckEmailMessage } from "./check-email-message";
@@ -13,17 +14,10 @@ export default function CheckEmailPage() {
   return (
     <AuthCard
       title="Check your email"
-      footer={
-        <Link
-          href="/sign-in"
-          className="font-medium text-foreground underline-offset-4 hover:underline"
-        >
-          Back to sign in
-        </Link>
-      }
+      icon={MailCheck}
+      footer={<TextLink href="/sign-in">Back to sign in</TextLink>}
     >
-      <div className="grid gap-4 text-sm text-muted-foreground">
-        <MailCheck className="size-10 text-foreground" aria-hidden />
+      <div className="grid gap-3 text-center text-sm text-balance text-muted-foreground">
         <Suspense fallback={<p>We&apos;ve sent you a link. It works for 1 hour.</p>}>
           <CheckEmailMessage />
         </Suspense>

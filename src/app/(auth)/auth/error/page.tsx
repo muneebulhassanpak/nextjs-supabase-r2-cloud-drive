@@ -1,3 +1,4 @@
+import { Link2Off } from "lucide-react";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -12,6 +13,7 @@ export default function AuthErrorPage() {
   return (
     <AuthCard
       title="That link didn't work"
+      icon={Link2Off}
       description="It may have expired (links work for 1 hour) or already been used. Each link works once."
     >
       <div className="grid gap-2">
