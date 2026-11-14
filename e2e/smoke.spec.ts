@@ -23,3 +23,20 @@ test("the home page shows the product and switches theme", async ({ page }) => {
   await page.getByRole("menuitemradio", { name: "Light" }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
+
+test("people who prefer less motion get a still page, with every section shown", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const animations = await page
+    .locator("h1, .reveal")
+    .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).animationName));
+  expect(animations.length).toBeGreaterThan(1);
+  expect(new Set(animations)).toEqual(new Set(["none"]));
+  await page.getByRole("link", { name: "Get started free" }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole("heading", { name: "Start with 100 MB, free" })).toHaveCSS(
+    "opacity",
+    "1",
+  );
+});

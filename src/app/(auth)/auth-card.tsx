@@ -22,12 +22,7 @@ export function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <Card size="lg" className="relative isolate">
-      {/* A wash of the brand colour behind the mark. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48 bg-radial-[at_50%_0%] from-primary-subtle to-transparent to-70%"
-      />
+    <Card size="lg">
       <CardHeader className="justify-items-center gap-2 text-center">
         {Icon ? (
           <span className="mb-4 grid size-12 place-items-center rounded-2xl bg-primary-subtle text-primary-subtle-foreground ring-8 ring-primary-subtle/50">

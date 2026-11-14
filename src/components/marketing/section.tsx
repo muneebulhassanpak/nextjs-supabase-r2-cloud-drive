@@ -5,7 +5,9 @@ import type { ComponentProps, ReactNode } from "react";
 
 /** The width every marketing section lines up to. */
 export function Container({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("mx-auto w-full max-w-6xl px-4 sm:px-6", className)} {...props} />;
+  return (
+    <div className={cn("mx-auto w-full max-w-page px-4 sm:px-6 lg:px-8", className)} {...props} />
+  );
 }
 
 /** A small label in the brand colour above a heading. */
@@ -33,7 +35,7 @@ export function SectionIntro({
 }) {
   if (align === "center") {
     return (
-      <div className="mx-auto grid max-w-2xl justify-items-center gap-4 text-center">
+      <div className="mx-auto grid max-w-2xl reveal justify-items-center gap-4 text-center">
         <Eyebrow>{eyebrow}</Eyebrow>
         <h2 id={id} className="text-headline text-balance">
           {title}
@@ -43,7 +45,7 @@ export function SectionIntro({
     );
   }
   return (
-    <div className="grid gap-6 lg:grid-cols-[3fr_2fr] lg:items-end lg:gap-16">
+    <div className="grid reveal gap-6 lg:grid-cols-[3fr_2fr] lg:items-end lg:gap-16">
       <div className="grid gap-4">
         <Eyebrow>{eyebrow}</Eyebrow>
         <h2 id={id} className="max-w-2xl text-headline text-balance">
