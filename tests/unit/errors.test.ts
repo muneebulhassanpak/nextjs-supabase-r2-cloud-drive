@@ -4,6 +4,7 @@ import {
   AppError,
   ConflictError,
   ForbiddenError,
+  formError,
   NotFoundError,
   pgErrorCode,
   QuotaExceededError,
@@ -140,5 +141,28 @@ describe("database errors", () => {
     expect(pgErrorCode(new Error("wrapped", { cause: dbError("23503") }))).toBe("23503");
     expect(pgErrorCode(Object.assign(new Error(), { code: "ECONNREFUSED" }))).toBeUndefined();
     expect(pgErrorCode("nope")).toBeUndefined();
+  });
+});
+
+describe("formError", () => {
+  it("wraps a message for the form", () => {
+    expect(formError("Nope.", { email: "a@b.dev" }, "req-2")).toEqual({
+      ok: false,
+      error: { code: "bad_request", message: "Nope.", requestId: "req-2" },
+      values: { email: "a@b.dev" },
+    });
+  });
+
+  it("wraps field errors, without values when none are given", () => {
+    const result = formError({ fieldErrors: { email: ["Enter a valid email address."] } });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "validation_error",
+        message: "Check the highlighted fields.",
+        requestId: undefined,
+        fieldErrors: { email: ["Enter a valid email address."] },
+      },
+    });
   });
 });
