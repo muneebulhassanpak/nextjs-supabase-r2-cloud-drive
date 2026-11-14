@@ -16,15 +16,15 @@ import type { DriveItem, ItemCategory } from "@/lib/drive/types";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<ItemCategory, { icon: LucideIcon; color: string; label: string }> = {
-  image: { icon: FileImage, color: "text-rose-500", label: "Image" },
-  video: { icon: FileVideo, color: "text-violet-500", label: "Video" },
-  audio: { icon: FileAudio, color: "text-amber-500", label: "Audio" },
-  pdf: { icon: FileText, color: "text-red-500", label: "PDF" },
-  document: { icon: FileText, color: "text-blue-500", label: "Document" },
-  spreadsheet: { icon: FileSpreadsheet, color: "text-green-600", label: "Spreadsheet" },
-  presentation: { icon: Presentation, color: "text-orange-500", label: "Presentation" },
-  text: { icon: FileCode, color: "text-slate-500", label: "Text" },
-  archive: { icon: FileArchive, color: "text-yellow-600", label: "Archive" },
+  image: { icon: FileImage, color: "text-file-image", label: "Image" },
+  video: { icon: FileVideo, color: "text-file-video", label: "Video" },
+  audio: { icon: FileAudio, color: "text-file-audio", label: "Audio" },
+  pdf: { icon: FileText, color: "text-file-pdf", label: "PDF" },
+  document: { icon: FileText, color: "text-file-document", label: "Document" },
+  spreadsheet: { icon: FileSpreadsheet, color: "text-file-spreadsheet", label: "Spreadsheet" },
+  presentation: { icon: Presentation, color: "text-file-presentation", label: "Presentation" },
+  text: { icon: FileCode, color: "text-file-text", label: "Text" },
+  archive: { icon: FileArchive, color: "text-file-archive", label: "Archive" },
   other: { icon: File, color: "text-muted-foreground", label: "File" },
 };
 
@@ -41,7 +41,7 @@ export function ItemIcon({
   className?: string;
 }) {
   if (item.kind === "folder") {
-    return <Folder className={cn("fill-current text-sky-500", className)} aria-hidden />;
+    return <Folder className={cn("fill-current text-file-folder", className)} aria-hidden />;
   }
   const { icon: Icon, color } = ICONS[item.category ?? "other"];
   return <Icon className={cn(color, className)} aria-hidden />;
