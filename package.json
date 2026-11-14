@@ -21,6 +21,7 @@
     "db:types": "supabase gen types typescript --schema public > src/server/db/database.types.ts",
     "db:advisors": "supabase db advisors --level info --fail-on warn",
     "storage:init": "node scripts/storage-init.mts",
+    "seed:files": "node scripts/seed-files.mts",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",

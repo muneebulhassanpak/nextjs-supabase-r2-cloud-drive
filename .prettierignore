@@ -5,3 +5,4 @@ playwright-report/
 test-results/
 supabase/.temp/
 src/server/db/database.types.ts
+fixtures/
