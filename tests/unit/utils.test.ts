@@ -13,6 +13,11 @@ describe("cn", () => {
     expect(cn("shadow-sm shadow-soft")).toBe("shadow-soft");
   });
 
+  it("knows the page width and the motion utilities", () => {
+    expect(cn("max-w-6xl max-w-page")).toBe("max-w-page");
+    expect(cn("animate-enter stagger-1 stagger-3 reveal")).toBe("animate-enter stagger-3 reveal");
+  });
+
   it("still merges ordinary conflicts", () => {
     expect(cn("px-2", "px-4")).toBe("px-4");
   });
