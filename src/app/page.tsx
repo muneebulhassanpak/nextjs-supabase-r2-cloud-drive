@@ -28,11 +28,10 @@ import { StackGrid } from "@/components/marketing/stack-grid";
 import { TextLink } from "@/components/text-link";
 import { buttonVariants } from "@/components/ui/button";
 import { FolderCard } from "@/components/ui/folder-card";
+import { REPO_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 import type { ReactNode } from "react";
-
-const REPO = "https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive";
 
 const REASONS = [
   {
@@ -51,7 +50,7 @@ const REASONS = [
     icon: Upload,
     title: "Drop files anywhere",
     href: "#uploads",
-    body: "Drag files onto any folder. Uploads carry on while you move around, and pick up again after a dropped connection.",
+    body: "Drag files onto any folder. Uploads carry on while you move around, and one that fails can be retried in a click.",
   },
 ];
 
@@ -257,7 +256,7 @@ export default function HomePage() {
                     them is tested. The code is open, so you can check.
                   </p>
                   <TextLink
-                    href={REPO}
+                    href={REPO_URL}
                     tone="brand"
                     className="group mt-2 inline-flex w-fit items-center gap-1.5"
                   >
