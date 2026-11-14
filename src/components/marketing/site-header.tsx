@@ -7,14 +7,15 @@ import { buttonVariants } from "@/components/ui/button";
 import { Container } from "./section";
 
 const LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#security", label: "Security" },
+  { href: "/#features", label: "Features" },
+  { href: "/#security", label: "Security" },
   { href: "https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive", label: "Source" },
 ];
 
+/** The header on every public page: the landing page and the auth pages. */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-20 border-b border-transparent bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20 scroll-edge">
       <Container className="flex h-16 items-center gap-4">
         <Link href="/" aria-label="Lockerly home" className="rounded-lg">
           <Brand />

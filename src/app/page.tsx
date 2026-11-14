@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  ArrowUpRight,
   Check,
   DatabaseZap,
   Eye,
@@ -37,33 +38,39 @@ const REASONS = [
   {
     icon: ShieldCheck,
     title: "Private by default",
+    href: "#security",
     body: "Everything you upload is yours alone. The database checks who may see each file, on every request.",
   },
   {
     icon: Eye,
     title: "Opens in the browser",
+    href: "#previews",
     body: "Photos, PDFs, video, audio and code open in place, with the rest of the folder a key press away.",
   },
   {
     icon: Upload,
     title: "Drop files anywhere",
+    href: "#uploads",
     body: "Drag files onto any folder. Uploads carry on while you move around, and pick up again after a dropped connection.",
   },
 ];
 
 const FEATURES: {
+  id: string;
   title: string;
   body: string;
   points: string[];
   picture: ReactNode;
 }[] = [
   {
+    id: "storage",
     title: "See where your space goes",
     body: "Every account starts with 100 MB. The sidebar shows what's used at a glance, and uploads that won't fit are stopped before they start.",
     points: ["Up to 25 MB per file", "Space comes back when you delete", "No surprise limits"],
     picture: <StorageMockup />,
   },
   {
+    id: "previews",
     title: "Open files without downloading",
     body: "A full-screen viewer for the files you use most. Step through a folder with the arrow keys, zoom into photos, and read code with highlighting.",
     points: [
@@ -74,6 +81,7 @@ const FEATURES: {
     picture: <PreviewMockup />,
   },
   {
+    id: "uploads",
     title: "Uploads you can rely on",
     body: "Files go straight from your browser to storage, so big uploads stay fast. You see each one's progress, and nothing half-finished is left behind.",
     points: [
@@ -116,7 +124,7 @@ export default function HomePage() {
         <Hero />
 
         <Container className="py-12">
-          <div className="flex flex-col items-center gap-x-12 gap-y-4 sm:flex-row sm:justify-between">
+          <div className="flex reveal flex-col items-center gap-x-12 gap-y-4 sm:flex-row sm:justify-between">
             <p className="text-sm text-muted-foreground">Built on</p>
             <ul className="flex flex-wrap justify-center gap-x-10 gap-y-3">
               {STACK.map((name) => (
@@ -148,21 +156,34 @@ export default function HomePage() {
                 const Icon = reason.icon;
                 const highlight = index === 0;
                 return (
-                  <FolderCard key={reason.title} tone={highlight ? "brand" : "canvas"}>
-                    <IconChip inverse={highlight}>
-                      <Icon />
-                    </IconChip>
-                    <h3 className="mt-10 text-title">{reason.title}</h3>
-                    <p
-                      className={
-                        highlight
-                          ? "mt-2 text-sm text-brand-foreground/80"
-                          : "mt-2 text-sm text-muted-foreground"
-                      }
-                    >
-                      {reason.body}
-                    </p>
-                  </FolderCard>
+                  // Each card leads to the part of the page that says more.
+                  <Link
+                    key={reason.title}
+                    href={reason.href}
+                    className="group flex reveal rounded-2xl transition-[translate,filter] duration-300 ease-out-quint outline-none hover:-translate-y-1 hover:drop-shadow-xl focus-visible:ring-3 focus-visible:ring-ring/50"
+                  >
+                    <FolderCard tone={highlight ? "brand" : "canvas"} className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <IconChip inverse={highlight}>
+                          <Icon />
+                        </IconChip>
+                        <ArrowUpRight
+                          className="size-5 opacity-60 transition-[translate,opacity] duration-300 ease-out-quint group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100"
+                          aria-hidden
+                        />
+                      </div>
+                      <h3 className="mt-10 text-title">{reason.title}</h3>
+                      <p
+                        className={
+                          highlight
+                            ? "mt-2 text-sm text-brand-foreground/80"
+                            : "mt-2 text-sm text-muted-foreground"
+                        }
+                      >
+                        {reason.body}
+                      </p>
+                    </FolderCard>
+                  </Link>
                 );
               })}
             </div>
@@ -179,8 +200,9 @@ export default function HomePage() {
             />
             {FEATURES.map((feature, index) => (
               <div
-                key={feature.title}
-                className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16"
+                key={feature.id}
+                id={feature.id}
+                className="grid reveal scroll-mt-24 items-center gap-10 lg:grid-cols-2 lg:gap-16"
               >
                 <Panel
                   glow="none"
@@ -225,16 +247,20 @@ export default function HomePage() {
                   <TextLink
                     href={REPO}
                     tone="brand"
-                    className="mt-2 inline-flex w-fit items-center gap-1.5"
+                    className="group mt-2 inline-flex w-fit items-center gap-1.5"
                   >
-                    Read the code on GitHub <ArrowRight className="size-4" aria-hidden />
+                    Read the code on GitHub{" "}
+                    <ArrowRight
+                      className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                      aria-hidden
+                    />
                   </TextLink>
                 </div>
                 <ul className="grid gap-4 sm:grid-cols-2">
                   {SAFEGUARDS.map(({ icon: Icon, title, body }) => (
                     <li
                       key={title}
-                      className="grid content-start gap-4 rounded-2xl bg-card p-6 shadow-soft ring-1 ring-border"
+                      className="grid reveal content-start gap-4 rounded-2xl bg-card p-6 shadow-soft ring-1 ring-border transition-shadow duration-300 hover:shadow-float"
                     >
                       <IconChip>
                         <Icon />
@@ -254,7 +280,7 @@ export default function HomePage() {
         <section aria-labelledby="start-heading" className="pt-8 pb-16 sm:pb-24">
           <Container>
             <Panel tone="brand" className="py-16 text-center sm:py-20">
-              <div className="mx-auto grid max-w-xl justify-items-center gap-5">
+              <div className="mx-auto grid max-w-xl reveal justify-items-center gap-5">
                 <h2 id="start-heading" className="text-headline text-balance">
                   Start with 100 MB, free
                 </h2>
@@ -284,18 +310,20 @@ function Hero() {
       <Panel className="sm:py-16 lg:py-20">
         <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.05fr] lg:gap-12">
           <div className="grid justify-items-start gap-6">
-            <span className="inline-flex items-center gap-2 rounded-full bg-card py-1 pr-3 pl-1.5 text-sm shadow-soft ring-1 ring-border">
+            <span className="inline-flex items-center gap-2 rounded-full bg-card py-1 pr-3 pl-1.5 text-sm shadow-soft ring-1 ring-border stagger-0 motion-safe:animate-enter">
               <span className="grid size-6 place-items-center rounded-full bg-primary-subtle text-primary-subtle-foreground">
                 <ShieldCheck className="size-3.5" aria-hidden />
               </span>
               Private by default
             </span>
-            <h1 className="text-display text-balance">Your files, safe and always within reach</h1>
-            <p className="max-w-lg text-lg text-pretty text-muted-foreground">
+            <h1 className="text-display text-balance stagger-1 motion-safe:animate-enter">
+              Your files, safe and always within reach
+            </h1>
+            <p className="max-w-lg text-lg text-pretty text-muted-foreground stagger-2 motion-safe:animate-enter">
               Upload, organise, preview and share files from any device. Every folder stays private
               until you choose otherwise.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 stagger-3 motion-safe:animate-enter">
               <Link href="/sign-up" className={buttonVariants({ size: "xl" })}>
                 Create a free account
                 <ArrowRight data-icon="inline-end" aria-hidden />
@@ -304,7 +332,7 @@ function Hero() {
                 Sign in
               </Link>
             </div>
-            <div className="mt-4 grid w-full max-w-md grid-cols-2 gap-4">
+            <div className="mt-4 grid w-full max-w-md grid-cols-2 gap-4 stagger-4 motion-safe:animate-enter">
               <FolderCard tone="brand">
                 <HardDrive className="size-5 opacity-80" aria-hidden />
                 <p className="mt-6 text-title whitespace-nowrap sm:text-headline">100 MB</p>
@@ -317,7 +345,7 @@ function Hero() {
               </FolderCard>
             </div>
           </div>
-          <div className="lg:pl-4">
+          <div className="stagger-3 motion-safe:animate-enter lg:pl-4">
             <DriveMockup />
           </div>
         </div>

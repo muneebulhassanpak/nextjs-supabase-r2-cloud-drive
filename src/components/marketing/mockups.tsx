@@ -73,12 +73,16 @@ function Chip({ children, className }: { children: ReactNode; className?: string
   );
 }
 
-function Meter({ value, className }: { value: number; className?: string }) {
+/** A progress bar. `live` keeps it moving, as if an upload were under way (still for reduced motion). */
+function Meter({ value, live = false }: { value: number; live?: boolean }) {
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-muted">
       <div
-        className={cn("h-full rounded-full bg-primary", className)}
-        style={{ width: `${value}%` }}
+        className={cn(
+          "h-full origin-left rounded-full bg-primary",
+          live && "motion-safe:animate-progress",
+        )}
+        style={{ transform: `scaleX(${value / 100})` }}
       />
     </div>
   );
@@ -139,8 +143,8 @@ export function DriveMockup() {
                 <li
                   key={item.name}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-2 py-2 text-xs",
-                    index === 1 && "bg-primary-subtle",
+                    "flex items-center gap-3 rounded-lg px-2 py-2 text-xs transition-colors duration-150",
+                    index === 1 ? "bg-primary-subtle" : "hover:bg-muted",
                   )}
                 >
                   <ItemIcon item={item} className="size-4" />
@@ -152,7 +156,7 @@ export function DriveMockup() {
           </div>
         </div>
       </Window>
-      <Chip className="-top-4 right-4 hidden sm:flex lg:-right-6">
+      <Chip className="-top-4 right-4 hidden motion-safe:animate-float sm:flex lg:-right-6">
         <span className="grid size-6 place-items-center rounded-full bg-primary text-primary-foreground">
           <Check className="size-3.5" />
         </span>
@@ -161,7 +165,7 @@ export function DriveMockup() {
           <span className="text-muted-foreground">Projects</span>
         </span>
       </Chip>
-      <Chip className="-bottom-5 left-6 hidden sm:flex lg:-left-8">
+      <Chip className="-bottom-5 left-6 hidden stagger-30 motion-safe:animate-float sm:flex lg:-left-8">
         <Lock className="size-4 text-primary" />
         <span className="font-medium">Only you can see this folder</span>
       </Chip>
@@ -333,7 +337,7 @@ export function UploadsMockup() {
                 <ItemIcon item={{ kind: "file", category: upload.category }} className="size-4" />
                 <span className="min-w-0 flex-1 truncate font-medium">{upload.name}</span>
               </div>
-              {upload.progress !== undefined && <Meter value={upload.progress} />}
+              {upload.progress !== undefined && <Meter value={upload.progress} live />}
               <span className="pl-7 text-muted-foreground">{upload.status}</span>
             </li>
           ))}
