@@ -4,6 +4,7 @@ import {
   cancelUpload,
   fileUrl,
   finishUpload,
+  readText,
   removeAvatar,
   saveAvatar,
   startAvatarUpload,
@@ -77,5 +78,15 @@ describe("upload API calls", () => {
     await expect(removeAvatar()).resolves.toBeUndefined();
     vi.stubGlobal("fetch", respond(404, { error: { message: "Upload not found." } }));
     await expect(cancelUpload("1")).resolves.toBeUndefined();
+  });
+
+  it("reads the start of a text file with a range, and an empty file as empty", async () => {
+    const fetch = vi.fn(() => Promise.resolve(new Response("hello world", { status: 206 })));
+    vi.stubGlobal("fetch", fetch);
+    await expect(readText("u", 5)).resolves.toBe("hello");
+    expect(fetch).toHaveBeenCalledWith("u", { headers: { range: "bytes=0-4" } });
+
+    vi.stubGlobal("fetch", respond(416));
+    await expect(readText("u", 5)).resolves.toBe("");
   });
 });

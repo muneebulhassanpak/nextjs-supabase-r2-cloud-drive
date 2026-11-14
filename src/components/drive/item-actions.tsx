@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FolderOpen, Info, Pencil, Trash2, type LucideIcon } from "lucide-react";
+import { Download, Eye, FolderOpen, Info, Pencil, Trash2, type LucideIcon } from "lucide-react";
 
 import type { DriveItem } from "@/lib/drive/types";
 
@@ -20,7 +20,10 @@ export function actionsFor(selected: DriveItem[], canEdit: boolean): ItemAction[
   const single = selected.length === 1 ? selected[0] : undefined;
   const actions: ItemAction[] = [];
   if (single?.kind === "folder") actions.push({ id: "open", label: "Open", icon: FolderOpen });
-  if (single?.kind === "file") actions.push({ id: "download", label: "Download", icon: Download });
+  if (single?.kind === "file") {
+    actions.push({ id: "open", label: "Preview", icon: Eye });
+    actions.push({ id: "download", label: "Download", icon: Download });
+  }
   if (single && canEdit)
     actions.push({ id: "rename", label: "Rename", icon: Pencil, shortcut: "F2" });
   if (single) actions.push({ id: "details", label: "Details", icon: Info });

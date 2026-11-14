@@ -128,3 +128,11 @@
     @apply font-sans;
   }
 }
+
+/* Shiki's token colours for both themes (see components/preview/code-view.tsx). */
+.code-view span[style] {
+  color: var(--shiki-light);
+}
+.dark .code-view span[style] {
+  color: var(--shiki-dark);
+}

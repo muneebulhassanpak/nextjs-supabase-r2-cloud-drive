@@ -4,6 +4,7 @@ import { ArrowUpDown, FolderPlus, Info, LayoutGrid, List, Plus, Upload } from "l
 import { usePathname, useRouter } from "next/navigation";
 import {
   startTransition,
+  useCallback,
   useMemo,
   useOptimistic,
   useRef,
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 
 import { createFolder, renameItem, setDriveView, trashItems } from "@/app/drive/item-actions";
 import { EmptyState } from "@/components/app/empty-state";
+import { FilePreview } from "@/components/preview/file-preview";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -121,6 +123,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     { kind: "new" } | { kind: "rename"; item: DriveItem } | null
   >(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const [sheetItem, setSheetItem] = useState<DriveItem | null>(null);
   const uploads = useUploads();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -128,6 +131,16 @@ export function FolderBrowser(props: FolderBrowserProps) {
 
   // Items can disappear (trashed, refreshed); the selection only ever holds what's on screen.
   const selected = sorted.filter((item) => selectedIds.has(item.id));
+  // What ← and → step through in a preview: the folder's files, in the order shown.
+  const previewFiles = useMemo(
+    () => sorted.filter((item) => item.kind === "file" && !pending.has(item.id)),
+    [sorted, pending],
+  );
+  // Closing a preview leaves the last file viewed selected, as if it had been clicked.
+  const closePreview = useCallback(() => {
+    if (previewId) setSelectedIds(new Set([previewId]));
+    setPreviewId(null);
+  }, [previewId]);
   const selectedSet = new Set(selected.map((item) => item.id));
   const detailsItem = selected.length === 1 ? (selected[0] ?? null) : null;
   const location = folder?.name ?? (props.sharedRoot ? "Shared with me" : "My Drive");
@@ -239,11 +252,13 @@ export function FolderBrowser(props: FolderBrowserProps) {
 
   function open(item: DriveItem) {
     if (item.kind === "folder") router.push(`/drive/folders/${item.id}`);
-    else {
-      // Previews arrive in Phase 6; until then, opening a file shows its details.
-      setSelectedIds(new Set([item.id]));
-      setDetailsOpen(true);
-    }
+    else setPreviewId(item.id);
+  }
+
+  function downloadFile(file: DriveItem) {
+    download(file.id).catch((error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Couldn't download that.");
+    });
   }
 
   function select(event: MouseEvent | KeyboardEvent, item: DriveItem) {
@@ -272,11 +287,8 @@ export function FolderBrowser(props: FolderBrowserProps) {
     const [first] = targets;
     if (action === "trash") trash(targets);
     else if (first && action === "open") open(first);
-    else if (first && action === "download") {
-      download(first.id).catch((error: unknown) => {
-        toast.error(error instanceof Error ? error.message : "Couldn't download that.");
-      });
-    } else if (first && action === "rename") setDialog({ kind: "rename", item: first });
+    else if (first && action === "download") downloadFile(first);
+    else if (first && action === "rename") setDialog({ kind: "rename", item: first });
     else if (first && action === "details") {
       setSelectedIds(new Set([first.id]));
       setDetailsOpen(true);
@@ -578,6 +590,15 @@ export function FolderBrowser(props: FolderBrowserProps) {
         >
           {details}
         </aside>
+      )}
+      {previewId && (
+        <FilePreview
+          files={previewFiles}
+          fileId={previewId}
+          onNavigate={setPreviewId}
+          onClose={closePreview}
+          onDownload={downloadFile}
+        />
       )}
       <Sheet open={detailsOpen && !isWide} onOpenChange={setDetailsOpen}>
         <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl p-6">
