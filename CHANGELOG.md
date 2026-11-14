@@ -14,6 +14,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - A 100 MB storage quota per person and a 25 MB limit per file, enforced by the database, including when uploads race each other.
 - More than 300 database tests covering who can do what (owner, editor, viewer, stranger, visitor), plus a check that removing or loosening any access rule makes a test fail.
 
+### Security
+
+- Build tools now use a patched `minimatch` (GHSA-g3hv-75wg-m249). The app itself never used it.
+
 ## [0.1.0] - 2026-11-13
 
 ### Added
