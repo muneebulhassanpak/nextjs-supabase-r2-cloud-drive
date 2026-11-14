@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-14
+
+### Added
+
+- Folders: create, rename and move folders to the trash, nested up to 50 levels deep, with breadcrumbs back to the top.
+- Browse in a list or a grid. Your choice is remembered on every device; sorting (name, modified, size) is kept in the address bar, folders always first.
+- Select items with a click, Ctrl/⌘ or Shift, or select everything with Ctrl/⌘+A. Keyboard shortcuts: F2 to rename, Delete to trash, Escape to clear.
+- A right-click menu, a "more" menu on every item, and an action sheet on phones.
+- A details panel showing type, owner, size and dates.
+- Changes show up instantly and roll back with a message if the server refuses them.
+
+### Security
+
+- The app asks the database what you may do with an item (owner, editor or viewer), so the buttons it shows always match the access rules. Folders you can't see look exactly like folders that don't exist.
+
 ## [0.3.0] - 2026-11-14
 
 ### Added
