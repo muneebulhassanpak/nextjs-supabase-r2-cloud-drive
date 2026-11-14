@@ -2,7 +2,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(50);
+select plan(51);
 
 -- Trash ------------------------------------------------------------------------------------------------
 
@@ -188,6 +188,23 @@ select is(
     where id in (tests.id('H2'), tests.id('h1'))$$),
   tests.sorted('{H2:0:true,h1:1:true}'),
   'with everything inside it, paths rewritten');
+
+-- Restoring after losing access to the folder it was in -----------------------------------------------
+
+select tests.clear_authentication();
+select tests.new_folder('K', 'owner', null, 'Team');
+insert into public.item_shares (item_id, user_id, role, created_by)
+values (tests.id('K'), tests.id('editor'), 'editor', tests.id('owner'));
+select tests.new_file('ek', 'editor', 'K', 'draft.txt', p_mime_type => 'text/plain');
+select tests.authenticate_as('editor');
+select public.trash_item(tests.id('ek'));
+select tests.clear_authentication();
+delete from public.item_shares where item_id = tests.id('K') and user_id = tests.id('editor');
+select tests.authenticate_as('editor');
+select is(
+  tests.rows(format($$select r.name || ' in ' || coalesce(tests.label(r.parent_id), 'My Drive') from public.restore_item(%L) r$$, tests.id('ek'))),
+  '{draft.txt in My Drive}',
+  'a file whose folder is no longer shared with its owner comes back to the top of their own drive');
 
 -- Names for copies --------------------------------------------------------------------------------------
 
