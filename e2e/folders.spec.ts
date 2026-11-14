@@ -136,14 +136,20 @@ test("select several with the keyboard and mouse, then trash them", async ({ pag
   for (const name of ["A", "C", "D"])
     await expect(row(page, name)).toHaveAttribute("aria-selected", "true");
   await expect(row(page, "B")).toHaveAttribute("aria-selected", "false");
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Details" })).toContainText(
+    "3 items selected",
+  );
+  await page.getByRole("button", { name: "Close details" }).click();
 
+  await row(page, "A").focus();
   await page.keyboard.press("Delete");
   await expect(page.getByText("3 items moved to the trash")).toBeVisible();
   await expect(row(page, "B")).toBeVisible();
   await expect(page.getByRole("row", { name: /^[ACD]$/ })).toHaveCount(0);
 
   await row(page, "B").click();
-  await page.getByRole("button", { name: "Details" }).click();
+  await page.getByRole("button", { name: "Details", exact: true }).click();
   await expect(page.getByRole("complementary", { name: "Details" })).toContainText("Owner");
   await expect(page.getByRole("complementary", { name: "Details" })).toContainText("You");
 });

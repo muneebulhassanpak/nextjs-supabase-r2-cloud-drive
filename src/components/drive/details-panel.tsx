@@ -12,12 +12,14 @@ import { ItemIcon, itemTypeLabel } from "./item-icon";
 /** What the selected item is: type, size, owner, modified, location. */
 export function DetailsPanel({
   item,
+  selectedCount,
   location,
   currentUserId,
   onClose,
   showClose = true,
 }: {
   item: DriveItem | null;
+  selectedCount: number;
   location: string;
   currentUserId: string;
   onClose: () => void;
@@ -65,7 +67,11 @@ export function DetailsPanel({
           </dl>
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">Select a file or folder to see its details.</p>
+        <p className="text-sm text-muted-foreground">
+          {selectedCount > 1
+            ? `${String(selectedCount)} items selected.`
+            : "Select a file or folder to see its details."}
+        </p>
       )}
     </div>
   );
