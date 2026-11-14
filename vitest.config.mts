@@ -17,8 +17,11 @@ export default defineConfig({
         "src/server/db/database.types.ts",
         // shadcn's class-name helper.
         "src/lib/utils.ts",
-        // Thin Supabase client factories: exercised once sign-in exists (Phase 3).
+        // Need a live Next.js request (cookies, React cache); covered by the e2e tests.
         "src/server/db/server.ts",
+        "src/server/auth/session.ts",
+        "src/server/services/profile.ts",
+        // Thin Supabase client factories with no logic of their own.
         "src/server/db/admin.ts",
         "src/lib/supabase-browser.ts",
       ],
