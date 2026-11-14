@@ -2,7 +2,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(49);
+select plan(53);
 
 -- Profiles -------------------------------------------------------------------------------------------
 
@@ -27,6 +27,14 @@ select is(tests.affected($$update public.profiles set full_name = 'Vee'$$), 1, '
 select lives_ok($$update public.profiles set avatar_url = 'https://example.com/a.png'$$, 'users set an https avatar');
 select throws_ok($$update public.profiles set avatar_url = 'javascript:alert(1)'$$, '23514', null,
   'avatars must be https URLs');
+select is(tests.affected($$update public.profiles set drive_view = 'grid'$$), 1,
+  'users choose grid or list for themselves, and only themselves');
+select is((select drive_view::text from public.profiles where id = auth.uid()), 'grid', 'the choice is kept');
+select throws_ok($$update public.profiles set drive_view = 'table'$$, '22P02', null, 'only grid or list');
+select tests.authenticate_as('owner');
+select is((select drive_view from public.profiles where id = auth.uid()), null::public.drive_view,
+  'everyone else keeps the default until they choose');
+select tests.authenticate_as('viewer');
 select throws_ok($$update public.profiles set storage_quota = 999999999999$$, '42501', 'permission denied for table profiles',
   'users cannot raise their quota');
 select throws_ok($$update public.profiles set storage_used = 0$$, '42501', 'permission denied for table profiles',
