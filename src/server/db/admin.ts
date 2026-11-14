@@ -9,7 +9,7 @@ import type { Database } from "@/server/db/database.types";
  *
  * Only for work that isn't done on behalf of a user: scheduled jobs (trash purge, upload cleanup)
  * and the demo reset. Never use it to serve a user's request. This is the only file allowed to
- * read SUPABASE_SECRET_KEY (checked in CI).
+ * read SUPABASE_SECRET_KEY, and only src/server/jobs/ may import it (both checked in CI).
  */
 export function createAdminClient() {
   const secretKey = env.SUPABASE_SECRET_KEY;
