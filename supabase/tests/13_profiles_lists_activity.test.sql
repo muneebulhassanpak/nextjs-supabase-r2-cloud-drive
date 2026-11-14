@@ -2,7 +2,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(53);
+select plan(56);
 
 -- Profiles -------------------------------------------------------------------------------------------
 
@@ -24,9 +24,15 @@ select throws_ok('select 1 from public.profiles', '42501', 'permission denied fo
 
 select tests.authenticate_as('viewer');
 select is(tests.affected($$update public.profiles set full_name = 'Vee'$$), 1, 'users rename themselves, and only themselves');
-select lives_ok($$update public.profiles set avatar_url = 'https://example.com/a.png'$$, 'users set an https avatar');
-select throws_ok($$update public.profiles set avatar_url = 'javascript:alert(1)'$$, '23514', null,
-  'avatars must be https URLs');
+select is(tests.affected($$update public.profiles set avatar_key = 'a/' || auth.uid() || '/' || gen_random_uuid()$$), 1,
+  'users set a picture in their own avatar folder');
+select throws_ok($$update public.profiles set avatar_key = 'a/' || tests.id('owner') || '/' || gen_random_uuid()$$,
+  '23514', null, 'a picture key can''t point into someone else''s avatar folder');
+select throws_ok($$update public.profiles set avatar_key = 'u/' || auth.uid() || '/' || gen_random_uuid()$$,
+  '23514', null, 'a picture key can''t point at a file');
+select throws_ok($$update public.profiles set avatar_key = 'a/' || auth.uid() || '/../u/x'$$,
+  '23514', null, 'a picture key is exactly a/<own id>/<uuid>');
+select lives_ok($$update public.profiles set avatar_key = null$$, 'users remove their picture');
 select is(tests.affected($$update public.profiles set drive_view = 'grid'$$), 1,
   'users choose grid or list for themselves, and only themselves');
 select is((select drive_view::text from public.profiles where id = auth.uid()), 'grid', 'the choice is kept');
