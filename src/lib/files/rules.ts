@@ -66,6 +66,9 @@ const INLINE_TYPES = new Set([
   "audio/flac",
 ]);
 
+/** Whether storage may send this type to be shown in the browser rather than downloaded. */
+export const canShowInline = (mimeType: string): boolean => INLINE_TYPES.has(mimeType);
+
 export type Disposition = "inline" | "attachment";
 
 /**
@@ -79,7 +82,7 @@ export function responseHeaders(
   wanted: Disposition,
 ): { contentType: string; contentDisposition: string } {
   const isText = mimeType.startsWith("text/") && mimeType !== "text/html";
-  const canShow = INLINE_TYPES.has(mimeType) || isText;
+  const canShow = canShowInline(mimeType) || isText;
   const disposition: Disposition = wanted === "inline" && canShow ? "inline" : "attachment";
   const contentType = canShow ? (isText ? "text/plain; charset=utf-8" : mimeType) : FALLBACK_TYPE;
   return { contentType, contentDisposition: contentDisposition(disposition, name) };
