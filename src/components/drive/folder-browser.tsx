@@ -157,20 +157,22 @@ const DATE_COLUMNS = {
 };
 
 /**
- * Sends ids in batches the server accepts, one batch after another. Returns what the batches
- * gave back, and the message of the first one that failed (the rest aren't sent).
+ * Sends ids in batches the server accepts, one batch after another. Every batch is sent, as the
+ * server carries on past a failed item within a batch: what happens to an item doesn't depend on
+ * which batch it fell in. Returns what the batches gave back, and the first problem.
  */
 async function inBatches<T>(
   ids: string[],
   send: (batch: string[]) => Promise<ActionResult<T>>,
 ): Promise<{ data: T[]; error?: string }> {
   const data: T[] = [];
+  let error: string | undefined;
   for (let start = 0; start < ids.length; start += ITEMS_PER_REQUEST) {
     const result = await send(ids.slice(start, start + ITEMS_PER_REQUEST));
-    if (!result.ok) return { data, error: result.error.message };
-    data.push(result.data);
+    if (result.ok) data.push(result.data);
+    else error ??= result.error.message;
   }
-  return { data };
+  return error === undefined ? { data } : { data, error };
 }
 
 const subscribeNever = () => () => undefined;
@@ -699,7 +701,9 @@ export function FolderBrowser(props: FolderBrowserProps) {
               crumbs={props.crumbs}
               current={folder?.name ?? null}
               sharedRoot={props.sharedRoot}
-              {...(canEdit && !isTouch && { dropTarget: drag.dropTarget })}
+              // Every folder above is theirs only in their own drive; in a shared one, an upper folder
+              // may be view-only, so its crumb takes no drops (Move to… checks each folder).
+              {...(canEdit && !isTouch && !props.sharedRoot && { dropTarget: drag.dropTarget })}
             />
           )}
           <div className="flex items-center gap-1">

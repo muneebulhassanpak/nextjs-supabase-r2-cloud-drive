@@ -121,7 +121,10 @@ function Picker({
   // The listing on screen is for `location` once loading has caught up with it.
   const ready = choices !== undefined && (choices.folder?.id ?? null) === location;
   const alreadyHere = items.every((item) => item.parentId === location);
-  const intoItself = location !== null && moving.has(location);
+  // Here, or anywhere inside a folder being moved (search can jump straight in).
+  const intoItself =
+    location !== null &&
+    (moving.has(location) || (ready && choices.crumbs.some((crumb) => moving.has(crumb.id))));
   const canMove = ready && choices.canEdit && !alreadyHere && !intoItself && !searching;
   const reason = !ready
     ? undefined
