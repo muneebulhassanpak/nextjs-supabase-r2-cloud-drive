@@ -17,6 +17,12 @@ export interface DriveItem {
   updatedAt: string;
   parentId: string | null;
   owner: { id: string; name: string | null; email: string | null };
+  /** Whether the signed-in person starred it. */
+  starred: boolean;
+  /** When they last opened it (Recent only). */
+  openedAt?: string;
+  /** When it went to the trash (Trash only). */
+  trashedAt?: string;
 }
 
 /** A folder above the current one, for the breadcrumbs. */

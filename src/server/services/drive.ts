@@ -10,8 +10,12 @@ import { createClient } from "@/server/db/server";
 /** Folders hold at most this many items on one page until paging arrives with search (Phase 9). */
 export const FOLDER_PAGE_SIZE = 1000;
 
+/** Most items Recent shows. */
+export const RECENT_LIMIT = 100;
+
+// `stars` holds only the caller's own star (row-level security), so it says whether they starred it.
 const ITEM_COLUMNS =
-  "id, kind, name, size, mime_type, category, updated_at, parent_id, owner:profiles!items_owner_id_fkey(id, full_name, email)";
+  "id, kind, name, size, mime_type, category, updated_at, parent_id, owner:profiles!items_owner_id_fkey(id, full_name, email), stars(user_id)";
 
 interface ItemRow {
   id: string;
@@ -24,6 +28,7 @@ interface ItemRow {
   parent_id: string | null;
   owner_id?: string;
   owner: { id: string; full_name: string | null; email: string } | null;
+  stars: { user_id: string }[];
 }
 
 function toDriveItem(row: ItemRow): DriveItem {
@@ -42,6 +47,7 @@ function toDriveItem(row: ItemRow): DriveItem {
       name: row.owner?.full_name ?? null,
       email: row.owner?.email ?? null,
     },
+    starred: row.stars.length > 0,
   };
 }
 
@@ -133,3 +139,91 @@ export const getFolder = cache(async (folderId: string): Promise<FolderView | nu
     items: children.data.map(toDriveItem),
   };
 });
+
+/** What the person starred and can still see, folders first. */
+export async function getStarred(): Promise<DriveItem[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("items")
+    // `!inner` keeps only items with a star, and the star is always the caller's own.
+    .select(ITEM_COLUMNS.replace("stars(", "stars!inner("))
+    .is("trashed_at", null)
+    .eq("status", "ready")
+    .order("kind")
+    .order("name")
+    .order("id")
+    .limit(FOLDER_PAGE_SIZE)
+    .overrideTypes<ItemRow[], { merge: false }>();
+  if (error) throw error;
+  return data.map(toDriveItem);
+}
+
+/** Files the person opened lately and can still see, newest first. */
+export async function getRecent(): Promise<DriveItem[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("recents")
+    .select(`touched_at, item:items!inner(${ITEM_COLUMNS})`)
+    .is("item.trashed_at", null)
+    .eq("item.status", "ready")
+    .order("touched_at", { ascending: false })
+    .limit(RECENT_LIMIT)
+    .overrideTypes<{ touched_at: string; item: ItemRow }[], { merge: false }>();
+  if (error) throw error;
+  return data.map((row) => ({ ...toDriveItem(row.item), openedAt: row.touched_at }));
+}
+
+/**
+ * The person's trash: what they own that's in it, and what they put there from folders shared
+ * with them. One row per trash entry; what went in with a folder comes back with it.
+ */
+export async function getTrash(): Promise<DriveItem[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("trash_entries")
+    .select(`${ITEM_COLUMNS}, trashed_at`)
+    .limit(FOLDER_PAGE_SIZE)
+    .overrideTypes<(ItemRow & { trashed_at: string })[], { merge: false }>();
+  if (error) throw error;
+  return data.map((row) => ({ ...toDriveItem(row), trashedAt: row.trashed_at }));
+}
+
+export interface FolderChoices {
+  /** null for the top of My Drive. */
+  folder: { id: string; name: string } | null;
+  /** Folders above, top first, as far up as the person can see. */
+  crumbs: Crumb[];
+  /** Whether things can be moved into this folder. */
+  canEdit: boolean;
+  folders: { id: string; name: string }[];
+}
+
+/** One step of the "Move to" picker: a folder and the folders in it, or null if it's hidden. */
+export async function getFolderChoices(folderId: string | null): Promise<FolderChoices | null> {
+  const view = folderId === null ? await getMyDriveRoot() : await getFolder(folderId);
+  if (!view) return null;
+  return {
+    folder: view.folder && { id: view.folder.id, name: view.folder.name },
+    crumbs: view.crumbs,
+    canEdit: view.folder?.role !== "viewer",
+    folders: view.items
+      .filter((item) => item.kind === "folder")
+      .map((item) => ({ id: item.id, name: item.name })),
+  };
+}
+
+/** Folders whose name contains `query`, for the picker's search. */
+export async function searchFolders(query: string): Promise<{ id: string; name: string }[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("search_items", { p_query: query, p_limit: 100 })
+    .select("id, name")
+    .eq("kind", "folder")
+    .limit(20);
+  if (error) throw error;
+  return data;
+}
