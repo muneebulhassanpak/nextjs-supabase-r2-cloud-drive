@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confirm your new email address</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      font-family:
+        -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, Helvetica, Arial,
+        sans-serif;
+      color: #171717;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      style="background: #f5f5f5; padding: 32px 16px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              max-width: 480px;
+              background: #ffffff;
+              border: 1px solid #e5e5e5;
+              border-radius: 12px;
+            "
+          >
+            <tr>
+              <td
+                style="
+                  padding: 32px 32px 0;
+                  font-size: 18px;
+                  font-weight: 600;
+                  letter-spacing: -0.01em;
+                "
+              >
+                Lockerly
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 24px 32px 32px">
+                <h1 style="margin: 0 0 12px; font-size: 20px; line-height: 28px; font-weight: 600">
+                  Confirm your new email
+                </h1>
+                <p style="margin: 0 0 24px; font-size: 14px; line-height: 22px; color: #404040">
+                  Confirm that you want to use {{ .NewEmail }} for your Lockerly account instead of
+                  {{ .Email }}.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 0 24px">
+                  <tr>
+                    <td style="border-radius: 8px; background: #171717">
+                      <a
+                        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email_change&amp;next=/drive/settings"
+                        style="
+                          display: inline-block;
+                          padding: 12px 20px;
+                          font-size: 14px;
+                          font-weight: 600;
+                          color: #ffffff;
+                          text-decoration: none;
+                        "
+                        >Confirm new email</a
+                      >
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin: 0; font-size: 12px; line-height: 18px; color: #737373">
+                  Or paste this link into your browser:<br /><a
+                    href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email_change&amp;next=/drive/settings"
+                    style="color: #737373; word-break: break-all"
+                    >{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash
+                    }}&amp;type=email_change&amp;next=/drive/settings</a
+                  >
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin: 16px 0 0; font-size: 12px; line-height: 18px; color: #737373">
+            If you didn&#39;t ask for this, you can ignore this email.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -1,34 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { env } from "@/env";
-import type { Database } from "@/server/db/database.types";
+import { anonClient, newUser } from "../support/local-stack";
 
 // Attacks the local stack the way anyone with the publishable key could: straight at the Data API,
 // with no app in between. The pgTAP suite covers each rule; this proves they hold over HTTP.
-
-type Client = SupabaseClient<Database>;
-
-function anonClient(): Client {
-  return createClient<Database>(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
-
-/** Signs up a fresh user (local email confirmation is off) and returns a client acting as them. */
-async function newUser(): Promise<{ client: Client; id: string }> {
-  const client = anonClient();
-  const { data, error } = await client.auth.signUp({
-    email: `rls-${randomUUID()}@test.dev`,
-    password: randomUUID(),
-  });
-  if (error || !data.user || !data.session) throw error ?? new Error("sign-up returned no session");
-  return { client, id: data.user.id };
-}
 
 describe("row-level security over the Data API", () => {
   let alice: Awaited<ReturnType<typeof newUser>>;

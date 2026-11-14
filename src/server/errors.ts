@@ -153,7 +153,32 @@ export function withErrorHandling<Args extends unknown[]>(
   };
 }
 
-/** What every Server Action returns, so forms can show errors without try/catch. */
+/**
+ * What every Server Action returns, so forms can show errors without try/catch. `values` gives a
+ * form back what was typed (React clears a form after its action runs); passwords are never sent.
+ */
 export type ActionResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: ErrorBody & { fieldErrors?: Record<string, string[]> } };
+  | {
+      ok: false;
+      error: ErrorBody & { fieldErrors?: Record<string, string[] | undefined> };
+      values?: Record<string, string>;
+    };
+
+/** A failed form submission, from a validation error or a message. */
+export function formError(
+  problem: string | { fieldErrors: Record<string, string[] | undefined> },
+  values?: Record<string, string>,
+  requestId?: string,
+): Extract<ActionResult<never>, { ok: false }> {
+  const error =
+    typeof problem === "string"
+      ? { code: "bad_request", message: problem, requestId }
+      : {
+          code: "validation_error",
+          message: "Check the highlighted fields.",
+          requestId,
+          fieldErrors: problem.fieldErrors,
+        };
+  return { ok: false, error, ...(values && { values }) };
+}
