@@ -306,7 +306,7 @@ isOneToOne: false
                            },
 "share_link_path":
 { Args: { "p_item_id": string,"p_token": string }; Returns: {
-              "id": string,"name": string
+              "id": string,"kind": Database["public"]['Enums']["item_kind"],"name": string
             }[]
                            },
 "share_link_status":

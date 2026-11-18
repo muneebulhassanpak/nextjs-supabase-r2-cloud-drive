@@ -6,7 +6,7 @@ import type { DriveItem } from "@/lib/drive/types";
 import type { Disposition } from "@/lib/files/rules";
 import { createClient } from "@/server/db/server";
 import { NotFoundError } from "@/server/errors";
-import { signFileUrl, signThumbnailUrl } from "@/server/services/files";
+import { signFileUrl } from "@/server/services/files";
 
 // Public links, for anyone holding the token, signed in or not. The database functions take the
 // token and decide everything: whether it's live, and whether an item is inside what it shares.
@@ -86,9 +86,10 @@ export const getLinkFolder = cache(
     ]);
     if (path.error) throw path.error;
     if (children.error) throw children.error;
-    if (path.data.length === 0) return null;
+    // Only folders open as a folder page; a file's id here would show as an empty folder.
+    if (path.data.at(-1)?.kind !== "folder") return null;
     return {
-      path: path.data,
+      path: path.data.map(({ id, name }) => ({ id, name })),
       items: (children.data as LinkRow[]).map((row) => toItem(row, folderId)),
     };
   },
@@ -113,8 +114,4 @@ async function linkedFile(token: string, fileId: string) {
 /** A short-lived link to a file's bytes, the same as for signed-in people. */
 export async function getLinkFileUrl(token: string, fileId: string, disposition: Disposition) {
   return signFileUrl(await linkedFile(token, fileId), disposition);
-}
-
-export async function getLinkThumbnailUrl(token: string, fileId: string) {
-  return signThumbnailUrl(await linkedFile(token, fileId));
 }

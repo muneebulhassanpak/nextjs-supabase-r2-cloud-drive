@@ -3,7 +3,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(33);
+select plan(34);
 
 -- Sharing says whether it was new ---------------------------------------------------------------------
 
@@ -98,6 +98,9 @@ select is_empty($$select 1 from public.share_link_status('never-made')$$, 'a tok
 
 select is(array(select name from public.share_link_path('sub-token', tests.id('f4'))),
   '{Designs,Archive,draft.txt}'::text[], 'the path starts at the linked folder, never above it');
+select is(
+  (select kind::text from public.share_link_path('sub-token', tests.id('f4')) order by kind = 'file' desc limit 1),
+  'file', 'the last step says it is a file, so it is not opened as a folder');
 select is_empty(format($$select 1 from public.share_link_path('sub-token', %L)$$, tests.id('f1')),
   'items outside the linked folder have no path');
 select is_empty(format($$select 1 from public.share_link_path('revoked-token', %L)$$, tests.id('f1')),
