@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+import type * as Email from "@/server/email";
 import { getSharedWithMe } from "@/server/services/drive";
 import { getFileUrl } from "@/server/services/files";
 import {
@@ -11,7 +12,7 @@ import {
 import {
   createLink,
   getShareInfo,
-  leaveShare,
+  leaveShares,
   removeShare,
   revokeLink,
   setShareRole,
@@ -32,6 +33,17 @@ vi.mock("@/server/auth/session", () => ({
   requireApiUser: () => Promise.resolve({ id: actingAs.id, email: actingAs.email }),
 }));
 vi.mock("@/server/db/server", () => ({ createClient: () => Promise.resolve(actingAs.client) }));
+// Real emails (logged locally), except to addresses meant to show a provider refusing one.
+vi.mock("@/server/email", async (original) => {
+  const real = await original<typeof Email>();
+  return {
+    ...real,
+    sendEmail: (email: { to: string }) =>
+      email.to.startsWith("bounce-")
+        ? Promise.reject(new Error("refused"))
+        : real.sendEmail(email as never),
+  };
+});
 
 type User = Awaited<ReturnType<typeof newUser>>;
 const as = (user: User) => {
@@ -182,9 +194,66 @@ describe("sharing with people", () => {
     await shareWithPeople(brief, [stranger.email], "viewer", ORIGIN);
     as(stranger);
     expect((await getFileUrl(brief, "inline")).url).toContain("brief.txt");
-    await leaveShare(brief);
+    expect(await leaveShares([brief, projects])).toEqual([brief]);
     expect(await getSharedWithMe()).toEqual([]);
-    await expect(leaveShare(brief)).rejects.toThrow("isn't shared with you");
+    await expect(leaveShares([brief])).rejects.toThrow("isn't shared with you");
+  });
+
+  it("keeps the strongest role, and the share on the item itself on a tie", async () => {
+    as(owner);
+    // Editor already edits Projects (above brief.txt): a viewer share on the file itself is weaker.
+    await shareWithPeople(brief, [editor.email], "viewer", ORIGIN);
+    let entry = (await getShareInfo(brief))?.people.find((person) => person.key === editor.id);
+    // The folder's role counts, so the weaker share here isn't offered for change here.
+    expect(entry).toMatchObject({ role: "editor", direct: false, from: { name: "Projects" } });
+    // The same role on the item itself counts as given here, so it can change here.
+    await setShareRole(brief, { userId: editor.id }, "editor");
+    entry = (await getShareInfo(brief))?.people.find((person) => person.key === editor.id);
+    expect(entry).toMatchObject({ role: "editor", direct: true, from: null });
+    await removeShare(brief, { userId: editor.id });
+  });
+
+  it("lists the top folder's owner on a file someone else put in their folder", async () => {
+    as(editor);
+    const notes = await upload("notes.txt", projects, "editor's notes");
+    const info = await getShareInfo(notes);
+    expect(info?.canManage).toBe(true);
+    // The uploader owns it (listed once); the folder's owner can edit it, so they're listed too.
+    expect(info?.people.map((entry) => [entry.key, entry.role, entry.from?.name ?? null])).toEqual([
+      [editor.id, "owner", null],
+      [owner.id, "editor", "Projects"],
+      [info?.people[2]?.key, "editor", "Projects"],
+    ]);
+    expect(info?.people[2]?.kind).toBe("invite");
+  });
+
+  it("changes and removes invites by email", async () => {
+    as(owner);
+    const invited = testEmail("share-later");
+    await shareWithPeople(designs, [invited], "viewer", ORIGIN);
+    await setShareRole(designs, { email: invited }, "editor");
+    expect((await getShareInfo(designs))?.people.find((entry) => entry.key === invited)?.role).toBe(
+      "editor",
+    );
+    await removeShare(designs, { email: invited });
+    expect((await getShareInfo(designs))?.people.some((entry) => entry.key === invited)).toBe(
+      false,
+    );
+    await expect(removeShare(designs, { email: invited })).rejects.toThrow("doesn't have access");
+  });
+
+  it("stops at the first refusal, and a failed email doesn't undo a share", async () => {
+    as(owner);
+    const bounce = testEmail("bounce");
+    const { shared, problem } = await shareWithPeople(
+      designs,
+      [bounce, owner.email, testEmail("never")],
+      "viewer",
+      ORIGIN,
+    );
+    expect(shared).toEqual([bounce]);
+    expect(problem).toMatchObject({ code: "LK422" });
+    expect((await getShareInfo(designs))?.people.some((entry) => entry.key === bounce)).toBe(true);
   });
 
   it("writes an email that names the sharer and the item, safely", () => {
@@ -237,7 +306,31 @@ describe("public links", () => {
     const { url } = await getLinkFileUrl(token, photo, "attachment");
     expect(await (await fetch(url)).text()).toBe("sand");
     await expect(getLinkFileUrl(token, elsewhere, "inline")).rejects.toThrow("File not found");
+    await expect(getLinkFileUrl(token, "not-an-id", "inline")).rejects.toThrow("File not found");
+    expect(await getLinkFolder(token, photo)).toBeNull();
+    expect(await getLinkRoot("short")).toBeNull();
+    expect(await getLinkFolder("short", inner)).toBeNull();
     expect(await getLinkFolder(token, crypto.randomUUID())).toBeNull();
+  });
+
+  it("pauses a link opened too often, for everyone", async () => {
+    as(owner);
+    const { token: busy } = await createLink(inner, null);
+    // Use up the link's 600 opens for this 10-minute window, as a crowd of visitors would.
+    const visitor = anonClient();
+    for (let batch = 0; batch < 12; batch += 1) {
+      const results = await Promise.all(
+        Array.from({ length: 50 }, () => visitor.rpc("resolve_share_link", { p_token: busy })),
+      );
+      expect(results.every((result) => result.error === null)).toBe(true);
+    }
+    asVisitor();
+    const paused = { code: "LK429" };
+    await expect(getLinkRoot(busy)).rejects.toMatchObject(paused);
+    await expect(getLinkFolder(busy, inner)).rejects.toMatchObject(paused);
+    await expect(getLinkFileUrl(busy, photo, "inline")).rejects.toMatchObject(paused);
+    // Another link to the same files has its own allowance.
+    expect(await getLinkRoot(token)).toMatchObject({ id: photos });
   });
 
   it("is made and turned off only by the owner", async () => {
