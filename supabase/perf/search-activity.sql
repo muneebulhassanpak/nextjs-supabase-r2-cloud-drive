@@ -38,7 +38,7 @@ select count(*) as owner_typo from public.search_items('invoce');
 select count(*) as owner_filtered from public.search_items('rep', 'pdf', 'me', now() - interval '7 days');
 select tests.authenticate_as('editor');
 select count(*) as editor_invo from public.search_items('invo');
-select count(*) as folder_activity
+select count(*) as editor_folder_activity
 from public.item_activity((select id from public.items where name = 'Folder 7'));
 select tests.authenticate_as('other');
 select count(*) as other_sees_of_owner
