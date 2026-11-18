@@ -24,11 +24,10 @@ create function public.search_items(
 )
 returns setof public.items
 language plpgsql
-stable
+-- Volatile only because it sets the similarity threshold (below); it changes no data.
+volatile
 security definer
 set search_path = ''
--- pg_trgm's default (0.6) misses a single missing letter in a 7-letter word.
-set pg_trgm.word_similarity_threshold = 0.5
 as $$
 declare
   v_query text := btrim(coalesce(p_query, ''));
@@ -53,6 +52,9 @@ begin
      and not p_type = any (enum_range(null::public.item_category)::text[]) then
     raise exception 'Unknown type' using errcode = 'LK422';
   end if;
+  -- pg_trgm's default (0.6) misses a single missing letter in a 7-letter word. Set here, for this
+  -- transaction only: a `set` clause on the function needs a superuser on hosted Postgres.
+  perform pg_catalog.set_config('pg_trgm.word_similarity_threshold', '0.5', true);
   -- Typed % and _ are searched for as themselves.
   v_roots := array(
     select s.item_id from public.item_shares s where s.user_id = v_uid
