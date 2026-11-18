@@ -6,18 +6,20 @@ import {
   FolderInput,
   FolderOpen,
   Info,
+  LogOut,
   Pencil,
   RotateCcw,
   Star,
   StarOff,
   Trash2,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 
 import type { DriveItem } from "@/lib/drive/types";
 
 /** Where the browser is: a folder, or one of the collections in the sidebar. */
-export type BrowserMode = "folder" | "starred" | "recent" | "trash";
+export type BrowserMode = "folder" | "shared" | "starred" | "recent" | "trash";
 
 export interface ItemAction {
   id:
@@ -25,6 +27,8 @@ export interface ItemAction {
     | "download"
     | "rename"
     | "move"
+    | "share"
+    | "leave"
     | "star"
     | "unstar"
     | "details"
@@ -79,6 +83,8 @@ export function actionsFor(selected: DriveItem[], context: ActionContext): ItemA
   if (single && canEdit)
     actions.push({ id: "rename", label: "Rename", icon: Pencil, shortcut: "F2" });
   if (count > 0 && canEdit) actions.push({ id: "move", label: "Move to…", icon: FolderInput });
+  // Everyone sees who has access; only the owner changes it (the dialog says so).
+  if (single) actions.push({ id: "share", label: "Share", icon: UserPlus });
   if (count > 0) {
     actions.push(
       selected.every((item) => item.starred)
@@ -87,6 +93,15 @@ export function actionsFor(selected: DriveItem[], context: ActionContext): ItemA
     );
   }
   if (single) actions.push({ id: "details", label: "Details", icon: Info });
+  if (mode === "shared" && count > 0) {
+    actions.push({
+      id: "leave",
+      label: "Remove from Shared with me",
+      icon: LogOut,
+      destructive: true,
+      shortcut: "Del",
+    });
+  }
   if (count > 0 && canEdit) {
     actions.push({
       id: "trash",

@@ -59,6 +59,12 @@ export class QuotaExceededError extends AppError {
   override readonly code = "quota_exceeded";
 }
 
+/** Too many requests in a short time (a rate limit). */
+export class TooManyRequestsError extends AppError {
+  override readonly status = 429;
+  override readonly code = "too_many_requests";
+}
+
 /**
  * The Postgres error code (SQLSTATE) of a database error. supabase-js returns it as `code` on the
  * error object; other clients may wrap it in `cause`, so both are checked.
@@ -86,7 +92,8 @@ function databaseMessage(error: unknown, fallback: string): string {
 /**
  * Database refusals that mean "you can't do that" rather than "something broke". Besides the
  * standard codes, the database raises its own (see supabase/migrations/*_triggers.sql):
- * LK409 conflict with the current state, LK413 quota or size limit, LK422 invalid input.
+ * LK409 conflict with the current state, LK413 quota or size limit, LK422 invalid input,
+ * LK429 a rate limit.
  */
 function fromDatabaseError(error: unknown, requestId?: string): AppError | undefined {
   switch (pgErrorCode(error)) {
@@ -110,6 +117,10 @@ function fromDatabaseError(error: unknown, requestId?: string): AppError | undef
       return new QuotaExceededError(databaseMessage(error, "Not enough storage space left."));
     case "LK422":
       return new ValidationError(databaseMessage(error, "That isn't valid."));
+    case "LK429":
+      return new TooManyRequestsError(
+        databaseMessage(error, "Too many requests. Try again in a few minutes."),
+      );
     case "22023":
     case "23514":
     case "22P02":
@@ -181,4 +192,12 @@ export function formError(
           fieldErrors: problem.fieldErrors,
         };
   return { ok: false, error, ...(values && { values }) };
+}
+
+/** A failed Server Action from anything thrown: the standard body; unexpected errors stay vague. */
+export async function actionError(
+  error: unknown,
+): Promise<Extract<ActionResult<never>, { ok: false }>> {
+  const { body } = toErrorBody(error, await getRequestId());
+  return { ok: false, error: body };
 }

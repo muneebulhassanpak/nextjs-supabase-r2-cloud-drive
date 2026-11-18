@@ -190,6 +190,26 @@ export async function getRecent(): Promise<DriveItem[]> {
 }
 
 /**
+ * What was shared with the person directly, newest share first. Things inside a shared folder
+ * aren't listed on their own: they're reached by opening the folder.
+ */
+export async function getSharedWithMe(): Promise<DriveItem[]> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("item_shares")
+    .select(`created_at, item:items!inner(${ITEM_COLUMNS})`)
+    .eq("user_id", user.id)
+    .is("item.trashed_at", null)
+    .eq("item.status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(FOLDER_PAGE_SIZE)
+    .overrideTypes<{ created_at: string; item: ItemRow }[], { merge: false }>();
+  if (error) throw error;
+  return data.map((row) => ({ ...toDriveItem(row.item), sharedAt: row.created_at }));
+}
+
+/**
  * The person's trash: what they own that's in it, and what they put there from folders shared
  * with them. One row per trash entry; what went in with a folder comes back with it.
  */

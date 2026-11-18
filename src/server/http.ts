@@ -1,4 +1,5 @@
 import "server-only";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 import { ValidationError } from "@/server/errors";
@@ -30,3 +31,16 @@ export async function readJson<T extends z.ZodType>(
 
 /** API answers are per person and per moment: never cached. */
 export const noStore = { "cache-control": "no-store" } as const;
+
+/**
+ * The address people reached the app at (https://lockerly.heymuneeb.dev, http://localhost:3000),
+ * for links in emails. Vercel and local servers both set these headers.
+ */
+export async function requestOrigin(): Promise<string> {
+  const all = await headers();
+  const host = all.get("x-forwarded-host") ?? all.get("host") ?? "localhost:3000";
+  const hostname = host.split(":")[0];
+  const local = hostname === "localhost" || hostname === "127.0.0.1";
+  const proto = all.get("x-forwarded-proto") ?? (local ? "http" : "https");
+  return `${proto}://${host}`;
+}

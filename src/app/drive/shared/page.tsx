@@ -1,19 +1,44 @@
-import { Users } from "lucide-react";
+import { Suspense } from "react";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { PageHeader } from "@/components/app/page-header";
+import { BrowserSkeleton } from "@/components/drive/browser-skeleton";
+import { FolderBrowser } from "@/components/drive/folder-browser";
+import { parseSort } from "@/lib/drive/sort";
+import { getSharedWithMe } from "@/server/services/drive";
+import { getMyProfile } from "@/server/services/profile";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Shared with me" };
 
-export default function SharedPage() {
+async function Shared({
+  searchParams,
+}: {
+  searchParams: PageProps<"/drive/shared">["searchParams"];
+}) {
+  const [items, profile, params] = await Promise.all([
+    getSharedWithMe(),
+    getMyProfile(),
+    searchParams,
+  ]);
   return (
-    <>
-      <PageHeader title="Shared with me" />
-      <EmptyState icon={Users} title="Nothing shared with you yet">
-        When someone shares a file or folder with you, it shows up here.
-      </EmptyState>
-    </>
+    <FolderBrowser
+      mode="shared"
+      folder={null}
+      items={items}
+      crumbs={[]}
+      sharedRoot={false}
+      sort={parseSort(params)}
+      view={profile.driveView}
+      canEdit={false}
+      currentUserId={profile.id}
+    />
+  );
+}
+
+export default function SharedPage({ searchParams }: PageProps<"/drive/shared">) {
+  return (
+    <Suspense fallback={<BrowserSkeleton />}>
+      <Shared searchParams={searchParams} />
+    </Suspense>
   );
 }
