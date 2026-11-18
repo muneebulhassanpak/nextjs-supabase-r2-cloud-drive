@@ -61,7 +61,8 @@ select is(
     'ping()',
     'resolve_share_link(text)',
     'share_link_children(text,uuid)',
-    'share_link_file(text,uuid)'
+    'share_link_file(text,uuid)',
+    'share_link_status(text)'
   ],
   'anon can call only the health check and the public link functions'
 );
@@ -72,6 +73,7 @@ select is(
   array[
     'cancel_upload(uuid)',
     'complete_upload(uuid,text)',
+    'create_share_link(uuid,bytea,timestamp with time zone)',
     'delete_forever(uuid)',
     'empty_trash()',
     'item_access_role(uuid)',
@@ -83,6 +85,7 @@ select is(
     'share_item(uuid,text,share_role)',
     'share_link_children(text,uuid)',
     'share_link_file(text,uuid)',
+    'share_link_status(text)',
     'start_upload(uuid,text,bigint,text)',
     'touch_recent(uuid)',
     'trash_entries()',
