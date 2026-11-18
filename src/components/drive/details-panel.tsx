@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import type { DriveItem } from "@/lib/drive/types";
+import { PENDING_PREFIX, type DriveItem } from "@/lib/drive/types";
 import { formatBytes } from "@/lib/format";
 
 import { ActivityList } from "./activity-list";
@@ -74,8 +74,15 @@ export function DetailsPanel({
         ))}
       </div>
       {tab === "activity" ? (
-        subject ? (
-          <ActivityList key={subject.id} itemId={subject.id} currentUserId={currentUserId} />
+        subject?.id.startsWith(PENDING_PREFIX) ? (
+          <p className="text-sm text-muted-foreground">Nothing has happened here yet.</p>
+        ) : subject ? (
+          // Reloads when the item changes (a rename made while the tab is open, say).
+          <ActivityList
+            key={`${subject.id}:${item?.updatedAt ?? ""}`}
+            itemId={subject.id}
+            currentUserId={currentUserId}
+          />
         ) : (
           <p className="text-sm text-muted-foreground">
             {selectedCount > 1

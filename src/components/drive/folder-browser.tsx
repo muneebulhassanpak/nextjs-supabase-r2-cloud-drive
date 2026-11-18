@@ -87,7 +87,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import { groupByOpened } from "@/lib/drive/recent";
 import { sortItems, type Sort, type SortKey } from "@/lib/drive/sort";
-import type { Crumb, DriveItem, DriveView } from "@/lib/drive/types";
+import { PENDING_PREFIX, type Crumb, type DriveItem, type DriveView } from "@/lib/drive/types";
 import { download } from "@/lib/files/api";
 import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/server/errors";
@@ -128,7 +128,6 @@ const SORT_LABELS: Record<SortKey, string> = {
   modified: "Last modified",
   size: "Size",
 };
-const TEMP_PREFIX = "pending-";
 
 /** The sidebar collections: their title, and what shows when they're empty. */
 const COLLECTIONS: Record<
@@ -245,7 +244,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     [mode, hydrated, sorted],
   );
   const pending = useMemo(
-    () => new Set(items.filter((i) => i.id.startsWith(TEMP_PREFIX)).map((i) => i.id)),
+    () => new Set(items.filter((i) => i.id.startsWith(PENDING_PREFIX)).map((i) => i.id)),
     [items],
   );
   const takenNames = useMemo(() => new Set(items.map((i) => i.name.toLowerCase())), [items]);
@@ -294,7 +293,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
       change({
         type: "add",
         item: {
-          id: `${TEMP_PREFIX}${crypto.randomUUID()}`,
+          id: `${PENDING_PREFIX}${crypto.randomUUID()}`,
           kind: "folder",
           name,
           size: null,

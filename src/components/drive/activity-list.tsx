@@ -22,6 +22,8 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [next, setNext] = useState<ActivityCursor | null>(null);
   const [error, setError] = useState<string>();
+  // A failed "Show older" keeps what's shown and offers another try.
+  const [moreError, setMoreError] = useState<string>();
   const [loaded, setLoaded] = useState(false);
   const [loading, startLoading] = useTransition();
 
@@ -49,7 +51,8 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
       if (result.ok) {
         setEntries((shown) => [...shown, ...result.data.entries]);
         setNext(result.data.next);
-      } else setError(result.error.message);
+        setMoreError(undefined);
+      } else setMoreError(result.error.message);
     });
   }
 
@@ -90,6 +93,11 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
           </li>
         ))}
       </ol>
+      {moreError && (
+        <p role="alert" className="text-sm text-destructive">
+          {moreError}
+        </p>
+      )}
       {next && (
         <Button
           variant="outline"
@@ -99,7 +107,7 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
           onClick={more}
         >
           {loading && <Loader2 className="animate-spin" />}
-          Show older
+          {moreError ? "Try again" : "Show older"}
         </Button>
       )}
     </div>
