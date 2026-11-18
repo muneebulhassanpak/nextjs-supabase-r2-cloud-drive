@@ -39,6 +39,7 @@ test("search, open a suggestion, then filter the results", async ({ page, isMobi
   await expect(page.getByRole("dialog", { name: "budget-2026.txt" })).toBeVisible();
   await expect(page.getByText("about budget-2026.txt")).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
 
   // Enter shows every result; a filter narrows them and Back undoes it.
   await search.fill("budget");

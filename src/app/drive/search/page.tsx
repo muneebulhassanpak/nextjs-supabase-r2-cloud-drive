@@ -50,7 +50,7 @@ async function Results({ searchParams }: Props) {
   return (
     <FolderBrowser
       // A new search starts fresh: selection, preview and all.
-      key={JSON.stringify(params)}
+      key={`${JSON.stringify(params)}:${open ?? ""}`}
       mode="search"
       title={`Results for “${params.q}”`}
       toolbar={<SearchFilters params={params} />}
