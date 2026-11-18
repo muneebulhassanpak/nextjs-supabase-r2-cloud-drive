@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 
 import { itemNameSchema, ITEMS_PER_REQUEST } from "@/lib/drive/names";
+import { MAX_QUERY_LENGTH } from "@/lib/drive/search";
 import type { DriveView, FolderChoices } from "@/lib/drive/types";
 import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
@@ -236,7 +237,7 @@ export async function findFolders(
   rawQuery: string,
 ): Promise<ActionResult<{ id: string; name: string }[]>> {
   await requireUser();
-  const query = z.string().trim().min(1).max(200).safeParse(rawQuery);
+  const query = z.string().trim().min(1).max(MAX_QUERY_LENGTH).safeParse(rawQuery);
   if (!query.success) return { ok: true, data: [] };
   try {
     return { ok: true, data: await searchFolders(query.data) };
