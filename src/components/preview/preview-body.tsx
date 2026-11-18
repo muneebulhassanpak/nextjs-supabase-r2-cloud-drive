@@ -4,9 +4,10 @@ import { Download, ExternalLink, LoaderCircle, RotateCw, ZoomIn, ZoomOut } from 
 import { useEffect, useState, type ReactNode } from "react";
 
 import { ItemIcon, itemTypeLabel } from "@/components/drive/item-icon";
+import { useFileAccess } from "@/components/files/file-access";
 import { Button } from "@/components/ui/button";
 import type { DriveItem } from "@/lib/drive/types";
-import { fileUrl, readText, TransferError } from "@/lib/files/api";
+import { readText, TransferError } from "@/lib/files/api";
 import { codeLanguage, previewKind, TEXT_PREVIEW_BYTES } from "@/lib/files/preview";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -69,7 +70,8 @@ function MediaPreview({
   kind: "image" | "pdf" | "video" | "audio";
   onDownload: () => void;
 }) {
-  const [link, retry] = useLoad(() => fileUrl(file.id, "inline").then(({ url }) => url));
+  const access = useFileAccess();
+  const [link, retry] = useLoad(() => access.url(file.id, "inline").then(({ url }) => url));
   const [broken, setBroken] = useState(false);
 
   if (link.state === "loading") return <Loading />;
@@ -188,9 +190,10 @@ function PdfView({
 }
 
 function TextPreview({ file, onDownload }: { file: DriveItem; onDownload: () => void }) {
+  const access = useFileAccess();
   const [text, retry] = useLoad(async () => {
     if (file.size === 0) return "";
-    const { url } = await fileUrl(file.id, "inline");
+    const { url } = await access.url(file.id, "inline");
     return readText(url, TEXT_PREVIEW_BYTES);
   });
   if (text.state === "loading") return <Loading />;

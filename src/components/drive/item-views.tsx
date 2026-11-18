@@ -3,9 +3,9 @@
 import { EllipsisVertical, Star } from "lucide-react";
 import { Fragment, useState } from "react";
 
+import { useFileAccess } from "@/components/files/file-access";
 import { Button } from "@/components/ui/button";
 import type { DriveItem } from "@/lib/drive/types";
-import { thumbnailSrc } from "@/lib/files/api";
 import { hasThumbnail } from "@/lib/files/preview";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -255,11 +255,12 @@ export function GridView(props: ViewProps) {
 /** An image file's picture (loaded only when scrolled into view), or the icon for its type. */
 function TilePicture({ item }: { item: DriveItem }) {
   const [failed, setFailed] = useState(false);
+  const { thumbnail } = useFileAccess();
   if (failed || !hasThumbnail(item)) return <ItemIcon item={item} className="size-10" />;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- a redirect to a signed storage link
     <img
-      src={thumbnailSrc(item.id)}
+      src={thumbnail(item.id)}
       alt=""
       loading="lazy"
       decoding="async"

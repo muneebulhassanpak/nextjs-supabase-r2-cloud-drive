@@ -32,12 +32,26 @@ async function readableFile(id: string) {
   return { ...file, object_key: file.object_key, mime_type: file.mime_type };
 }
 
+export interface StoredFile {
+  name: string;
+  mime_type: string;
+  size: number | null;
+  object_key: string;
+}
+
 /** A short-lived link to a file's bytes, to download or (if its type allows) to view. */
 export async function getFileUrl(
   id: string,
   disposition: Disposition,
 ): Promise<{ url: string; expiresIn: number }> {
-  const file = await readableFile(id);
+  return signFileUrl(await readableFile(id), disposition);
+}
+
+/** Signs a storage link for a file the caller has already been allowed to read. */
+export async function signFileUrl(
+  file: StoredFile,
+  disposition: Disposition,
+): Promise<{ url: string; expiresIn: number }> {
   const kind = previewKind(file.mime_type);
   // Players and PDF viewers keep reading as people watch and scroll: their links last longer.
   const expiresIn =
@@ -55,7 +69,11 @@ export async function getFileUrl(
 
 /** A link to show an image in grid view, or "not found" for files without a thumbnail. */
 export async function getThumbnailUrl(id: string): Promise<{ url: string; maxAge: number }> {
-  const file = await readableFile(id);
+  return signThumbnailUrl(await readableFile(id));
+}
+
+/** The thumbnail link for a file the caller has already been allowed to read. */
+export async function signThumbnailUrl(file: StoredFile): Promise<{ url: string; maxAge: number }> {
   if (!hasThumbnail({ mimeType: file.mime_type, size: file.size })) {
     throw new NotFoundError("No thumbnail.");
   }

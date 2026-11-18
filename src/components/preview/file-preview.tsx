@@ -5,9 +5,9 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { useEffect, type DragEvent } from "react";
 
 import { ItemIcon } from "@/components/drive/item-icon";
+import { useFileAccess } from "@/components/files/file-access";
 import { Button } from "@/components/ui/button";
 import type { DriveItem } from "@/lib/drive/types";
-import { markOpened } from "@/lib/files/api";
 import { cn } from "@/lib/utils";
 
 import { PreviewBody } from "./preview-body";
@@ -39,14 +39,15 @@ export function FilePreview({
   const next = index >= 0 ? files[index + 1] : undefined;
 
   // A file looked at for a moment goes to the top of Recents; one stepped past on the way doesn't.
+  const { opened } = useFileAccess();
   useEffect(() => {
     const timer = setTimeout(() => {
-      void markOpened(fileId);
+      opened(fileId);
     }, RECENT_AFTER_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [fileId]);
+  }, [fileId, opened]);
 
   // ← and → step through the folder. Listened for on the window, so they work wherever focus is.
   const previousId = previous?.id;
