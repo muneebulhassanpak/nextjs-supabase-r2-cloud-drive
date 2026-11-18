@@ -43,3 +43,6 @@ export interface FolderChoices {
   canEdit: boolean;
   folders: { id: string; name: string }[];
 }
+
+/** Ids of items shown before the server has created them (a new folder, say). */
+export const PENDING_PREFIX = "pending-";
