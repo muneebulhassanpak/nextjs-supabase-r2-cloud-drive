@@ -34,6 +34,7 @@ export function SearchBox() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // Only the latest request's answer is shown; a slower earlier one is ignored.
   const latest = useRef(0);
@@ -73,6 +74,7 @@ export function SearchBox() {
       void suggestItems(trimmed).then((result) => {
         if (request !== latest.current) return;
         setSuggestions(result.ok ? result.data : []);
+        setFailed(!result.ok);
         setLoading(false);
       });
     }, SUGGEST_DELAY_MS);
@@ -85,18 +87,24 @@ export function SearchBox() {
     router.push(href);
   }
 
+  // While new suggestions load, the old ones are for different words: shown, but not picked.
+  const pickable = open && !loading;
+
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown" && open) {
+    // Enter that confirms an input method's (IME) candidate isn't a search.
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === "ArrowDown" && pickable) {
       event.preventDefault();
       setActive((index) => Math.min(index + 1, suggestions.length - 1));
-    } else if (event.key === "ArrowUp" && open) {
+    } else if (event.key === "ArrowUp" && pickable) {
       event.preventDefault();
       setActive((index) => Math.max(index - 1, -1));
     } else if (event.key === "Escape") {
       setOpen(false);
+      setActive(-1);
     } else if (event.key === "Enter") {
       event.preventDefault();
-      const picked = active >= 0 ? suggestions[active] : undefined;
+      const picked = pickable && active >= 0 ? suggestions[active] : undefined;
       const trimmed = query.trim();
       if (picked) go(itemHref(picked, trimmed));
       else if (trimmed) go(searchHref({ q: trimmed }));
@@ -151,23 +159,30 @@ export function SearchBox() {
                 id={`${listId}-${String(index)}`}
                 role="option"
                 aria-selected={index === active}
+                aria-disabled={loading}
                 className={cn(
                   "flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm",
                   index === active ? "bg-accent" : "hover:bg-accent/60",
+                  loading && "opacity-60",
                 )}
                 onMouseDown={(event) => {
                   // Keep focus in the box so the list doesn't close before the click.
                   event.preventDefault();
                 }}
                 onClick={() => {
-                  go(itemHref(item, query.trim()));
+                  if (!loading) go(itemHref(item, query.trim()));
                 }}
               >
                 <ItemIcon item={item} className="size-4 shrink-0" />
                 <span className="truncate">{item.name}</span>
               </li>
             ))}
-            {!loading && suggestions.length === 0 && (
+            {!loading && failed && (
+              <li role="alert" className="px-2.5 py-2 text-sm text-destructive">
+                Suggestions aren&apos;t loading. Press Enter to search.
+              </li>
+            )}
+            {!loading && !failed && suggestions.length === 0 && (
               <li className="px-2.5 py-2 text-sm text-muted-foreground">No matches yet</li>
             )}
           </ul>
