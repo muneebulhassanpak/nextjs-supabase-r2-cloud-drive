@@ -62,6 +62,7 @@ select is(
     'resolve_share_link(text)',
     'share_link_children(text,uuid)',
     'share_link_file(text,uuid)',
+    'share_link_path(text,uuid)',
     'share_link_status(text)'
   ],
   'anon can call only the health check and the public link functions'
@@ -85,6 +86,7 @@ select is(
     'share_item(uuid,text,share_role)',
     'share_link_children(text,uuid)',
     'share_link_file(text,uuid)',
+    'share_link_path(text,uuid)',
     'share_link_status(text)',
     'start_upload(uuid,text,bigint,text)',
     'touch_recent(uuid)',

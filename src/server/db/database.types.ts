@@ -304,6 +304,11 @@ isOneToOne: false
               "mime_type": string,"name": string,"object_key": string,"size": number
             }[]
                            },
+"share_link_path":
+{ Args: { "p_item_id": string,"p_token": string }; Returns: {
+              "id": string,"name": string
+            }[]
+                           },
 "share_link_status":
 { Args: { "p_token": string }; Returns: {
               "expires_at": string,"status": string
