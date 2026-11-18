@@ -99,6 +99,7 @@ describe("database errors", () => {
     ["23503", 409, "conflict"],
     ["LK409", 409, "conflict"],
     ["LK413", 413, "quota_exceeded"],
+    ["LK429", 429, "too_many_requests"],
     ["LK422", 422, "validation_error"],
     ["22023", 422, "validation_error"],
     ["23514", 422, "validation_error"],

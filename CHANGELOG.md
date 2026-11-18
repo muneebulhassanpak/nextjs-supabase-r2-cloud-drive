@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-18
+
+### Added
+
+- Share files and folders with people by email, as a Viewer or an Editor. People without an account are invited and see the item once they sign up with that address. Everyone it's newly shared with gets an email.
+- The share dialog lists who has access, including access that comes from a folder above ("From “Projects”"). The owner can change roles or remove people; everyone else can see the list but not change it.
+- The Shared with me page lists what others have shared with you. You can remove things from it.
+- Public links: anyone with the link can view and download, signed in or not, with no expiry or one that ends after 1, 7 or 30 days. The link is shown once (only a fingerprint of it is stored); making a new one or turning it off stops the old one at once.
+- Links that no longer open say why: expired, turned off, in the trash, or never valid.
+- Limits on sharing (50 people an hour) and on making links (30 an hour), and a pause for a link opened more than 600 times in 10 minutes.
+
 ## [0.7.0] - 2026-11-14
 
 ### Added
@@ -137,7 +148,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Three environments: local (Supabase CLI and RustFS in Docker), staging (`develop`) and production (`main`). Database changes reach staging and production automatically after review.
 - Checks on every pull request: lint, types, unit and integration tests with coverage, database tests (pgTAP), a production build and browser tests on desktop and phone sizes.
 
-[Unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.6.0...v0.6.1

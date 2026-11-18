@@ -234,6 +234,9 @@ isOneToOne: false
 "complete_upload":
 { Args: { "p_item_id": string,"p_name"?: string }; Returns: string
                            },
+"create_share_link":
+{ Args: { "p_expires_at"?: string,"p_item_id": string,"p_token_hash": string }; Returns: string
+                           },
 "delete_forever":
 { Args: { "p_item_id": string }; Returns: string[]
                            },
@@ -289,7 +292,7 @@ isOneToOne: false
         isSetofReturn: true
       } },
 "share_item":
-{ Args: { "p_email": string,"p_item_id": string,"p_role": Database["public"]['Enums']["share_role"] }; Returns: undefined
+{ Args: { "p_email": string,"p_item_id": string,"p_role": Database["public"]['Enums']["share_role"] }; Returns: boolean
                            },
 "share_link_children":
 { Args: { "p_folder_id": string,"p_token": string }; Returns: {
@@ -299,6 +302,16 @@ isOneToOne: false
 "share_link_file":
 { Args: { "p_item_id": string,"p_token": string }; Returns: {
               "mime_type": string,"name": string,"object_key": string,"size": number
+            }[]
+                           },
+"share_link_path":
+{ Args: { "p_item_id": string,"p_token": string }; Returns: {
+              "id": string,"kind": Database["public"]['Enums']["item_kind"],"name": string
+            }[]
+                           },
+"share_link_status":
+{ Args: { "p_token": string }; Returns: {
+              "expires_at": string,"status": string
             }[]
                            },
 "start_upload":

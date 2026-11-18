@@ -11,6 +11,7 @@ import {
   Star,
   Trash2,
   Upload,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ import {
   setStarred,
   trashItems,
 } from "@/app/drive/item-actions";
+import { leaveItems } from "@/app/drive/share-actions";
 import { EmptyState } from "@/components/app/empty-state";
 import { FilePreview } from "@/components/preview/file-preview";
 import {
@@ -96,6 +98,7 @@ import { ItemIcon } from "./item-icon";
 import { GridView, ListView } from "./item-views";
 import { MoveDialog, type Destination } from "./move-dialog";
 import { NameDialog } from "./name-dialog";
+import { ShareDialog } from "./share-dialog";
 import { useItemDrag } from "./use-item-drag";
 
 type Change =
@@ -131,6 +134,12 @@ const COLLECTIONS: Record<
   Exclude<BrowserMode, "folder">,
   { title: string; icon: LucideIcon; empty: string; emptyText: string }
 > = {
+  shared: {
+    title: "Shared with me",
+    icon: Users,
+    empty: "Nothing shared with you yet",
+    emptyText: "When someone shares a file or folder with you, it shows up here.",
+  },
   starred: {
     title: "Starred",
     icon: Star,
@@ -152,6 +161,7 @@ const COLLECTIONS: Record<
 };
 
 const DATE_COLUMNS = {
+  shared: { label: "Shared", value: (item: DriveItem) => item.sharedAt },
   recent: { label: "Opened", value: (item: DriveItem) => item.openedAt },
   trash: { label: "Trashed", value: (item: DriveItem) => item.trashedAt },
 };
@@ -178,7 +188,7 @@ async function inBatches<T>(
 const subscribeNever = () => () => undefined;
 
 export interface FolderBrowserProps {
-  /** A folder (the default), or one of the collections: Starred, Recent, Trash. */
+  /** A folder (the default), or one of the collections: Shared with me, Starred, Recent, Trash. */
   mode?: BrowserMode;
   /** null at the top of My Drive, and in collections. */
   folder: { id: string; name: string } | null;
@@ -206,9 +216,9 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const isWide = useMediaQuery("(min-width: 1024px)");
 
   const [items, change] = useOptimistic(props.items, applyChange);
-  // Recent and Trash keep the server's order: newest first.
+  // Shared with me, Recent and Trash keep the server's order: newest first.
   const sorted = useMemo(
-    () => (mode === "recent" || mode === "trash" ? items : sortItems(items, sort)),
+    () => (mode === "folder" || mode === "starred" ? sortItems(items, sort) : items),
     [items, sort, mode],
   );
   // Grouping by day needs the viewer's clock and time zone, so it starts after hydration.
@@ -234,6 +244,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     { kind: "new" } | { kind: "rename"; item: DriveItem } | null
   >(null);
   const [moving, setMoving] = useState<DriveItem[]>([]);
+  const [sharing, setSharing] = useState<DriveItem | null>(null);
   const [confirm, setConfirm] = useState<
     { kind: "delete"; items: DriveItem[] } | { kind: "empty" } | null
   >(null);
@@ -368,6 +379,23 @@ export function FolderBrowser(props: FolderBrowserProps) {
       );
       const { error } = await inBatches(ids, (batch) => setStarred(batch, starred));
       if (error) toast.error(error);
+    });
+  }
+
+  function leave(targets: DriveItem[]) {
+    const ids = targets.map((item) => item.id);
+    setSelectedIds(new Set());
+    startTransition(async () => {
+      change({ type: "remove", ids });
+      const { error } = await inBatches(ids, leaveItems);
+      if (error) toast.error(error);
+      else {
+        toast.success(
+          ids.length === 1
+            ? `Removed “${targets[0]?.name ?? ""}”. Its owner can share it again.`
+            : `Removed ${String(ids.length)} items`,
+        );
+      }
     });
   }
 
@@ -528,10 +556,12 @@ export function FolderBrowser(props: FolderBrowserProps) {
     else if (action === "move") setMoving(targets);
     else if (action === "star" || action === "unstar") star(targets, action === "star");
     else if (action === "restore") restore(targets);
+    else if (action === "leave") leave(targets);
     else if (action === "delete") setConfirm({ kind: "delete", items: targets });
     else if (first && action === "open") open(first);
     else if (first && action === "download") downloadFile(first);
     else if (first && action === "rename") setDialog({ kind: "rename", item: first });
+    else if (first && action === "share") setSharing(first);
     else if (first && action === "details") {
       setSelectedIds(new Set([first.id]));
       setDetailsOpen(true);
@@ -971,6 +1001,13 @@ export function FolderBrowser(props: FolderBrowserProps) {
         }}
         onMove={(destination) => {
           move(moving, destination);
+        }}
+      />
+      <ShareDialog
+        item={sharing}
+        currentUserId={currentUserId}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setSharing(null);
         }}
       />
       <AlertDialog

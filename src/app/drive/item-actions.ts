@@ -7,8 +7,7 @@ import { itemNameSchema, ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import type { DriveView, FolderChoices } from "@/lib/drive/types";
 import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
-import { formError, pgErrorCode, toErrorBody, type ActionResult } from "@/server/errors";
-import { getRequestId } from "@/server/request-id";
+import { actionError, formError, pgErrorCode, type ActionResult } from "@/server/errors";
 import { getFolderChoices, searchFolders } from "@/server/services/drive";
 import { deleteEntryForever, emptyTrash } from "@/server/services/trash";
 
@@ -22,8 +21,7 @@ async function failure(error: unknown, name?: string): Promise<ActionResult<neve
   if (name && pgErrorCode(error) === "23505") {
     return formError(`There's already something called “${name}” here.`);
   }
-  const { body } = toErrorBody(error, await getRequestId());
-  return { ok: false, error: body };
+  return actionError(error);
 }
 
 export async function createFolder(

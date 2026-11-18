@@ -57,6 +57,7 @@ describe("actionsFor", () => {
       "download",
       "rename",
       "move",
+      "share",
       "star",
       "details",
       "trash",
@@ -74,8 +75,20 @@ describe("actionsFor", () => {
 
   it("lets viewers and the collections star, but not change things", () => {
     for (const context of [{ canEdit: false }, { mode: "starred" as const, canEdit: false }]) {
-      expect(ids([item()], context)).toEqual(["open", "download", "star", "details"]);
+      expect(ids([item()], context)).toEqual(["open", "download", "share", "star", "details"]);
     }
+  });
+
+  it("lets people leave what was shared with them", () => {
+    expect(ids([item()], { mode: "shared", canEdit: false })).toEqual([
+      "open",
+      "download",
+      "share",
+      "star",
+      "details",
+      "leave",
+    ]);
+    expect(ids([item(), item()], { mode: "shared", canEdit: false })).toEqual(["star", "leave"]);
   });
 
   it("restores in the trash, and deletes forever only what's yours", () => {

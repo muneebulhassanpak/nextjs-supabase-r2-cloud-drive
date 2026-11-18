@@ -49,8 +49,15 @@ export const env = createEnv({
     // Set by Vercel on every deployment; shown by /api/health so you can tell which build is live.
     VERCEL_GIT_COMMIT_SHA: z.string().optional(),
 
-    // Transactional email (share notifications). Unset locally: emails are logged instead.
-    RESEND_API_KEY: z.string().startsWith("re_").optional(),
+    // Where people reach the app, for links in emails (never taken from request headers, which
+    // the sender controls). Required on Vercel.
+    APP_URL: required(z.url(), "http://localhost:3000"),
+
+    // Transactional email (share notifications). Required on Vercel; unset locally, where emails
+    // are written to the log instead.
+    RESEND_API_KEY: onVercel
+      ? z.string().startsWith("re_")
+      : z.string().startsWith("re_").optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: required(z.url(), LOCAL.supabaseUrl),
@@ -65,6 +72,7 @@ export const env = createEnv({
     STORAGE_ACCESS_KEY_ID: process.env.STORAGE_ACCESS_KEY_ID,
     STORAGE_SECRET_ACCESS_KEY: process.env.STORAGE_SECRET_ACCESS_KEY,
     CRON_SECRET: process.env.CRON_SECRET,
+    APP_URL: process.env.APP_URL,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
