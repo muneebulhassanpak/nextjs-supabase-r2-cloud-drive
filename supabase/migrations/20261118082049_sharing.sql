@@ -259,3 +259,26 @@ $$;
 
 revoke execute on function public.share_link_status(text) from public, anon, authenticated;
 grant execute on function public.share_link_status(text) to anon, authenticated;
+
+-- The path from the linked folder down to an item reached through the link, top first, for the
+-- link page's breadcrumbs. Nothing above the linked item is ever shown. Not counted as a use: it
+-- comes with a folder page, which already counts.
+create function public.share_link_path(p_token text, p_item_id uuid)
+returns table (id uuid, name text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select a.id, a.name
+  from private.link_reaches(p_token, p_item_id) t
+  cross join lateral (select (private.link_item(p_token)).id as root_id) r
+  cross join lateral unnest(t.ancestors || t.id) with ordinality as p(item_id, position)
+  join public.items a on a.id = p.item_id
+  where t.id is not null
+    and p.position >= array_position(t.ancestors || t.id, r.root_id)
+  order by p.position
+$$;
+
+revoke execute on function public.share_link_path(text, uuid) from public, anon, authenticated;
+grant execute on function public.share_link_path(text, uuid) to anon, authenticated;

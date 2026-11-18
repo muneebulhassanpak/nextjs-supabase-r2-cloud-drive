@@ -3,7 +3,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(30);
+select plan(33);
 
 -- Sharing says whether it was new ---------------------------------------------------------------------
 
@@ -93,6 +93,15 @@ select is(tests.rows($$select status from public.share_link_status('expired-toke
 select is(tests.rows($$select status from public.share_link_status('trashed-token')$$), '{unavailable}',
   'a link to something in the trash');
 select is_empty($$select 1 from public.share_link_status('never-made')$$, 'a token that never existed');
+
+-- The path inside a link -------------------------------------------------------------------------------
+
+select is(array(select name from public.share_link_path('sub-token', tests.id('f4'))),
+  '{Designs,Archive,draft.txt}'::text[], 'the path starts at the linked folder, never above it');
+select is_empty(format($$select 1 from public.share_link_path('sub-token', %L)$$, tests.id('f1')),
+  'items outside the linked folder have no path');
+select is_empty(format($$select 1 from public.share_link_path('revoked-token', %L)$$, tests.id('f1')),
+  'a dead link has none either');
 
 -- Rate limit on using a link ----------------------------------------------------------------------------
 
