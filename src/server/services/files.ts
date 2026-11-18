@@ -69,11 +69,7 @@ export async function signFileUrl(
 
 /** A link to show an image in grid view, or "not found" for files without a thumbnail. */
 export async function getThumbnailUrl(id: string): Promise<{ url: string; maxAge: number }> {
-  return signThumbnailUrl(await readableFile(id));
-}
-
-/** The thumbnail link for a file the caller has already been allowed to read. */
-export async function signThumbnailUrl(file: StoredFile): Promise<{ url: string; maxAge: number }> {
+  const file = await readableFile(id);
   if (!hasThumbnail({ mimeType: file.mime_type, size: file.size })) {
     throw new NotFoundError("No thumbnail.");
   }
