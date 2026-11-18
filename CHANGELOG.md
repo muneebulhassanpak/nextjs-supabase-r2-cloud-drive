@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Share files and folders with people by email, as a Viewer or an Editor. People without an account are invited and see the item once they sign up with that address. Everyone it's newly shared with gets an email.
+- The share dialog lists who has access, including access that comes from a folder above ("From “Projects”"). The owner can change roles or remove people; everyone else can see the list but not change it.
+- The Shared with me page lists what others have shared with you. You can remove things from it.
+- Public links: anyone with the link can view and download, signed in or not, with no expiry or one that ends after 1, 7 or 30 days. The link is shown once (only a fingerprint of it is stored); making a new one or turning it off stops the old one at once.
+- Links that no longer open say why: expired, turned off, in the trash, or never valid.
+- Limits on sharing (50 people an hour) and on making links (30 an hour), and a pause for a link opened more than 600 times in 10 minutes.
+
 ## [0.7.0] - 2026-11-14
 
 ### Added
