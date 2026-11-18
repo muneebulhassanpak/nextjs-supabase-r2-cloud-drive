@@ -142,17 +142,21 @@ begin
   end if;
 
   return query
-  with page as (
-    select a.id, a.action, a.details, a.created_at, a.actor_id, i.id as item_id, i.name, i.kind
+  -- The items policy, once per item in the folder (not once per entry, of which there are more).
+  with visible as materialized (
+    select i.id, i.name, i.kind
     from public.items i
-    join public.activity a on a.item_id = i.id
     where (i.id = p_item_id or i.ancestors @> array[p_item_id])
-      -- The items policy, for each item in the folder.
       and (i.owner_id = v_uid
            or (i.status = 'ready'
                and private.item_role(i.owner_id, i.id, i.ancestors)
                  >= case when i.trashed_at is null then 'viewer'::public.access_role else 'editor' end))
-      and (p_before_at is null or (a.created_at, a.id) < (p_before_at, p_before_id))
+  ),
+  page as (
+    select a.id, a.action, a.details, a.created_at, a.actor_id, i.id as item_id, i.name, i.kind
+    from visible i
+    join public.activity a on a.item_id = i.id
+    where (p_before_at is null or (a.created_at, a.id) < (p_before_at, p_before_id))
     order by a.created_at desc, a.id desc
     limit least(greatest(coalesce(p_limit, 30), 1), 100)
   )
