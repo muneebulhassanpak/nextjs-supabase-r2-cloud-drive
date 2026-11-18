@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Search from the top bar: suggestions appear as you type (pick one with the arrow keys or the mouse), and Enter shows every result. Names that start with your words come first, and small typos are forgiven.
+- The results page can be narrowed by type, owner (me, others) and when items changed (last 7 days, 30 days, 12 months, or a custom range). Filters live in the address, so a search can be bookmarked, shared or stepped back through.
+- An Activity tab in the details panel shows who did what and when: uploads, renames, moves, trash, sharing and links. A folder's activity includes everything inside it. Times read "2 hours ago", with the exact time on hover, and older entries load on request.
+
+### Changed
+
+- Search, and the folder search in "Move to…", stay fast on large drives (under 100 ms with 10,000 items).
+
 ## [0.8.0] - 2026-11-18
 
 ### Added
