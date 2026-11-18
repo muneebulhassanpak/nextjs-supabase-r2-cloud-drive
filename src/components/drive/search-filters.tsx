@@ -34,7 +34,13 @@ export function SearchFilters({ params }: { params: SearchParams }) {
 
   function applyRange(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    apply({ modified: "custom", from: from || null, to: to || null });
+    apply({
+      modified: "custom",
+      from: from || null,
+      to: to || null,
+      // The dates are days on this person's calendar.
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
   }
 
   return (
