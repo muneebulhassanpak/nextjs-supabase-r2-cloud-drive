@@ -13,6 +13,7 @@ describe("search params", () => {
         modified: "custom",
         from: "2026-01-02",
         to: "nope",
+        tz: "Asia/Karachi",
       }),
     ).toEqual({
       q: "invoice",
@@ -21,12 +22,19 @@ describe("search params", () => {
       modified: "custom",
       from: "2026-01-02",
       to: null,
+      tz: "Asia/Karachi",
     });
     expect(parseSearchParams({ q: ["a", "b"], type: "virus", owner: "x", modified: "1y" })).toEqual(
-      { q: "a", type: null, owner: "any", modified: "any", from: null, to: null },
+      { q: "a", type: null, owner: "any", modified: "any", from: null, to: null, tz: null },
     );
     expect(parseSearchParams({ q: "x".repeat(150) }).q).toHaveLength(100);
     expect(parseSearchParams({ from: "2026-02-31x" }).from).toBeNull();
+    // Impossible days and unknown zones are dropped, not rolled over.
+    expect(parseSearchParams({ from: "2026-02-31", to: "2024-02-29" })).toMatchObject({
+      from: null,
+      to: "2024-02-29",
+    });
+    expect(parseSearchParams({ tz: "Mars/Olympus" }).tz).toBeNull();
   });
 
   it("builds short URLs that leave out defaults", () => {
@@ -43,26 +51,49 @@ describe("search params", () => {
         to: "2026-01-31",
       }),
     ).toBe("/drive/search?q=a&modified=custom&from=2026-01-01&to=2026-01-31");
+    expect(
+      searchHref({ q: "a", modified: "custom", from: "2026-01-01", tz: "Europe/London" }),
+    ).toBe("/drive/search?q=a&modified=custom&from=2026-01-01&tz=Europe%2FLondon");
+    expect(searchHref({ q: "a", modified: "custom", tz: "Europe/London" })).toBe(
+      "/drive/search?q=a&modified=custom",
+    );
   });
 
   it("turns the modified filter into a time range", () => {
     const now = new Date("2026-11-18T12:00:00Z");
-    expect(modifiedRange({ modified: "any", from: null, to: null }, now)).toEqual({
+    expect(modifiedRange({ modified: "any", from: null, to: null, tz: null }, now)).toEqual({
       from: null,
       to: null,
     });
-    expect(modifiedRange({ modified: "7d", from: null, to: null }, now)).toEqual({
+    expect(modifiedRange({ modified: "7d", from: null, to: null, tz: null }, now)).toEqual({
       from: "2026-11-11T12:00:00.000Z",
       to: null,
     });
     // Both days of a custom range count in full.
     expect(
-      modifiedRange({ modified: "custom", from: "2026-01-01", to: "2026-01-31" }, now),
+      modifiedRange({ modified: "custom", from: "2026-01-01", to: "2026-01-31", tz: null }, now),
     ).toEqual({
       from: "2026-01-01T00:00:00.000Z",
       to: "2026-02-01T00:00:00.000Z",
     });
-    expect(modifiedRange({ modified: "custom", from: null, to: null }, now)).toEqual({
+    // Days on the searcher's calendar: Karachi is UTC+5; New York changes clocks on 8 March 2026.
+    expect(
+      modifiedRange({
+        modified: "custom",
+        from: "2026-01-01",
+        to: "2026-01-31",
+        tz: "Asia/Karachi",
+      }),
+    ).toEqual({ from: "2025-12-31T19:00:00.000Z", to: "2026-01-31T19:00:00.000Z" });
+    expect(
+      modifiedRange({
+        modified: "custom",
+        from: "2026-03-08",
+        to: "2026-03-08",
+        tz: "America/New_York",
+      }),
+    ).toEqual({ from: "2026-03-08T05:00:00.000Z", to: "2026-03-09T04:00:00.000Z" });
+    expect(modifiedRange({ modified: "custom", from: null, to: null, tz: null }, now)).toEqual({
       from: null,
       to: null,
     });
