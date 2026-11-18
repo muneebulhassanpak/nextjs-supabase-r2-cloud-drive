@@ -2,23 +2,21 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import { fileUrl, linkFileUrl, linkThumbnailSrc, markOpened, thumbnailSrc } from "@/lib/files/api";
+import { fileUrl, linkFileUrl, markOpened } from "@/lib/files/api";
 
 /**
  * How the browser reaches a file's bytes: as the signed-in person (the default), or through a
- * public link, where the token stands in for an account. Previews and thumbnails ask this, so the
- * same components work in both places.
+ * public link, where the token stands in for an account. Previews ask this, so the same
+ * components work in both places.
  */
 export interface FileAccess {
   url: (id: string, disposition: "inline" | "attachment") => Promise<{ url: string }>;
-  thumbnail: (id: string) => string;
   /** Counts an open, for Recents. Nothing to count for people on a public link. */
   opened: (id: string) => void;
 }
 
 const signedIn: FileAccess = {
   url: fileUrl,
-  thumbnail: thumbnailSrc,
   opened: (id) => {
     void markOpened(id);
   },
@@ -33,7 +31,6 @@ export function LinkFileAccess({ token, children }: { token: string; children: R
   const access = useMemo<FileAccess>(
     () => ({
       url: (id, disposition) => linkFileUrl(token, id, disposition),
-      thumbnail: (id) => linkThumbnailSrc(token, id),
       opened: () => undefined,
     }),
     [token],
