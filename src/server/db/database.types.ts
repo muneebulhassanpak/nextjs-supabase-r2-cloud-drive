@@ -246,6 +246,11 @@ isOneToOne: false
 "item_access_role":
 { Args: { "p_item_id": string }; Returns: Database["public"]['Enums']["access_role"]
                            },
+"item_activity":
+{ Args: { "p_before_at"?: string,"p_before_id"?: number,"p_item_id": string,"p_limit"?: number }; Returns: {
+              "action": Database["public"]['Enums']["activity_action"],"actor_email": string,"actor_id": string,"actor_name": string,"created_at": string,"details": Json,"from_name": string,"id": number,"item_id": string,"item_kind": Database["public"]['Enums']["item_kind"],"item_name": string,"person_email": string,"person_name": string,"to_name": string
+            }[]
+                           },
 "move_item":
 { Args: { "p_item_id": string,"p_parent_id": string }; Returns: undefined
                            },
@@ -266,7 +271,7 @@ isOneToOne: false
             }[]
                            },
 "search_items":
-{ Args: { "p_limit"?: number,"p_query": string }; Returns: {
+{ Args: { "p_limit"?: number,"p_modified_from"?: string,"p_modified_to"?: string,"p_owner"?: string,"p_query": string,"p_type"?: string }; Returns: {
               "ancestors": (string)[],
 "category": Database["public"]['Enums']["item_category"] | null,
 "created_at": string,
