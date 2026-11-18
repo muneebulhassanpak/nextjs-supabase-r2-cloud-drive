@@ -23,6 +23,8 @@ export interface DriveItem {
   openedAt?: string;
   /** When it went to the trash (Trash only). */
   trashedAt?: string;
+  /** When it was shared with the person (Shared with me). */
+  sharedAt?: string;
 }
 
 /** A folder above the current one, for the breadcrumbs. */
