@@ -1,14 +1,13 @@
-import { Search } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { Account, AccountSkeleton } from "@/components/app/account";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { Nav } from "@/components/app/nav";
+import { SearchBox, SearchBoxFallback } from "@/components/app/search-box";
 import { StorageMeter, StorageMeterSkeleton } from "@/components/app/storage-meter";
 import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
 import { UploadProvider } from "@/components/uploads/upload-provider";
 
@@ -39,20 +38,9 @@ export default function DriveLayout({ children }: LayoutProps<"/drive">) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-3 backdrop-blur md:px-6">
             <MobileNav footer={storage} />
-            <div className="relative max-w-xl flex-1">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                type="search"
-                placeholder="Search in Lockerly"
-                aria-label="Search in Lockerly"
-                className="pl-9"
-                disabled
-                title="Search is coming soon"
-              />
-            </div>
+            <Suspense fallback={<SearchBoxFallback />}>
+              <SearchBox />
+            </Suspense>
             <div className="ml-auto flex items-center gap-1">
               <ThemeToggle />
               <Suspense fallback={<AccountSkeleton />}>
