@@ -261,16 +261,17 @@ revoke execute on function public.share_link_status(text) from public, anon, aut
 grant execute on function public.share_link_status(text) to anon, authenticated;
 
 -- The path from the linked folder down to an item reached through the link, top first, for the
--- link page's breadcrumbs. Nothing above the linked item is ever shown. Not counted as a use: it
+-- link page's breadcrumbs (the last entry's kind says whether it's a folder that can be opened).
+-- Nothing above the linked item is ever shown. Not counted as a use: it
 -- comes with a folder page, which already counts.
 create function public.share_link_path(p_token text, p_item_id uuid)
-returns table (id uuid, name text)
+returns table (id uuid, name text, kind public.item_kind)
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select a.id, a.name
+  select a.id, a.name, a.kind
   from private.link_reaches(p_token, p_item_id) t
   cross join lateral (select (private.link_item(p_token)).id as root_id) r
   cross join lateral unnest(t.ancestors || t.id) with ordinality as p(item_id, position)
