@@ -77,6 +77,14 @@ export const removeAvatar = () => api<undefined>("/api/avatar", { method: "DELET
 export const fileUrl = (id: string, disposition: "inline" | "attachment") =>
   api<{ url: string }>(`/api/files/${id}/url?disposition=${disposition}`);
 
+/** The same, for a file reached through a public link: the token is the permission. */
+export const linkFileUrl = (token: string, id: string, disposition: "inline" | "attachment") =>
+  api<{ url: string }>(`/api/s/${token}/files/${id}/url?disposition=${disposition}`);
+
+/** Where a public link page loads an image's thumbnail from. */
+export const linkThumbnailSrc = (token: string, id: string) =>
+  `/api/s/${token}/files/${id}/thumbnail`;
+
 /** Records that a file was opened, for Recents. Never throws: Recents can miss one. */
 export const markOpened = (id: string) =>
   api<undefined>(`/api/files/${id}/opened`, { method: "POST" }).catch(() => undefined);
