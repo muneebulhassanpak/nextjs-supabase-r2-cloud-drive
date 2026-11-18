@@ -23,7 +23,7 @@ select is_empty($$select * from public.search_items('%')$$, '% is matched litera
 select is_empty($$select * from public.search_items('_')$$, '_ is matched literally, not as a wildcard');
 select is_empty($$select * from public.search_items('   ')$$, 'a blank search finds nothing');
 select is(
-  (select count(*)::int from public.search_items('.', 2)), 2, 'the caller can ask for fewer results');
+  (select count(*)::int from public.search_items('.', p_limit => 2)), 2, 'the caller can ask for fewer results');
 select tests.authenticate_as_anon();
 select throws_ok($$select * from public.search_items('a')$$, '42501', null, 'anon cannot search');
 
