@@ -253,22 +253,40 @@ export async function getFolderChoices(folderId: string | null): Promise<FolderC
   };
 }
 
-/** Folders whose name contains `query`, for the picker's search. */
+/** Folders whose name matches `query`, best first, for the picker's search. */
 export async function searchFolders(query: string): Promise<{ id: string; name: string }[]> {
   await requireUser();
   const supabase = await createClient();
-  // Matched here rather than through search_items, whose limit applies before files are left out.
-  const pattern = query.trim().replace(/[\\%_]/g, (character) => `\\${character}`);
   const { data, error } = await supabase
-    .from("items")
-    .select("id, name")
-    .eq("kind", "folder")
-    .is("trashed_at", null)
-    .eq("status", "ready")
-    .ilike("name", `%${pattern}%`)
-    .order("name")
-    .order("id")
-    .limit(20);
+    .rpc("search_items", { p_query: query, p_type: "folder", p_limit: 20 })
+    .select("id, name");
   if (error) throw error;
   return data;
+}
+
+export interface SearchFilters {
+  query: string;
+  type: string | null;
+  owner: "me" | "others" | "any";
+  modifiedFrom: string | null;
+  modifiedTo: string | null;
+}
+
+/** Everything the person can see whose name matches, best first (never trashed items). */
+export async function searchDrive(filters: SearchFilters, limit = 50): Promise<DriveItem[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("search_items", {
+      p_query: filters.query,
+      p_owner: filters.owner,
+      p_limit: limit,
+      ...(filters.type && { p_type: filters.type }),
+      ...(filters.modifiedFrom && { p_modified_from: filters.modifiedFrom }),
+      ...(filters.modifiedTo && { p_modified_to: filters.modifiedTo }),
+    })
+    .select(ITEM_COLUMNS)
+    .overrideTypes<ItemRow[], { merge: false }>();
+  if (error) throw error;
+  return data.map(toDriveItem);
 }

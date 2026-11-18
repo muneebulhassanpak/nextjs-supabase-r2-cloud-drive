@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   List,
   Plus,
+  Search,
   Star,
   Trash2,
   Upload,
@@ -86,7 +87,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import { groupByOpened } from "@/lib/drive/recent";
 import { sortItems, type Sort, type SortKey } from "@/lib/drive/sort";
-import type { Crumb, DriveItem, DriveView } from "@/lib/drive/types";
+import { PENDING_PREFIX, type Crumb, type DriveItem, type DriveView } from "@/lib/drive/types";
 import { download } from "@/lib/files/api";
 import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/server/errors";
@@ -127,13 +128,18 @@ const SORT_LABELS: Record<SortKey, string> = {
   modified: "Last modified",
   size: "Size",
 };
-const TEMP_PREFIX = "pending-";
 
 /** The sidebar collections: their title, and what shows when they're empty. */
 const COLLECTIONS: Record<
   Exclude<BrowserMode, "folder">,
   { title: string; icon: LucideIcon; empty: string; emptyText: string }
 > = {
+  search: {
+    title: "Search results",
+    icon: Search,
+    empty: "No results",
+    emptyText: "Try other words, or fewer filters.",
+  },
   shared: {
     title: "Shared with me",
     icon: Users,
@@ -200,6 +206,12 @@ export interface FolderBrowserProps {
   /** Whether the person may add, rename, move and trash things here (folders only). */
   canEdit: boolean;
   currentUserId: string;
+  /** A heading instead of the collection's own (search results say what was searched for). */
+  title?: string;
+  /** Shown under the heading (search filters). */
+  toolbar?: ReactNode;
+  /** A file to open in a preview straight away (a search suggestion). */
+  initialPreviewId?: string;
 }
 
 /**
@@ -232,7 +244,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     [mode, hydrated, sorted],
   );
   const pending = useMemo(
-    () => new Set(items.filter((i) => i.id.startsWith(TEMP_PREFIX)).map((i) => i.id)),
+    () => new Set(items.filter((i) => i.id.startsWith(PENDING_PREFIX)).map((i) => i.id)),
     [items],
   );
   const takenNames = useMemo(() => new Set(items.map((i) => i.name.toLowerCase())), [items]);
@@ -249,7 +261,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     { kind: "delete"; items: DriveItem[] } | { kind: "empty" } | null
   >(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(props.initialPreviewId ?? null);
   const [sheetItem, setSheetItem] = useState<DriveItem | null>(null);
   const uploads = useUploads();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -281,7 +293,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
       change({
         type: "add",
         item: {
-          id: `${TEMP_PREFIX}${crypto.randomUUID()}`,
+          id: `${PENDING_PREFIX}${crypto.randomUUID()}`,
           kind: "folder",
           name,
           size: null,
@@ -672,7 +684,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     pending,
     currentUserId,
     groups,
-    ...(mode !== "folder" && mode !== "starred" && { dateColumn: DATE_COLUMNS[mode] }),
+    ...(mode in DATE_COLUMNS && { dateColumn: DATE_COLUMNS[mode as keyof typeof DATE_COLUMNS] }),
     itemProps: (item: DriveItem) => drag.itemProps(item, pending.has(item.id)),
     onOpen: open,
     onKeyDown: onItemKeyDown,
@@ -689,6 +701,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
       item={detailsItem}
       selectedCount={selected.length}
       location={mode === "folder" ? location : undefined}
+      folder={folder}
       currentUserId={currentUserId}
       onClose={() => {
         setDetailsOpen(false);
@@ -724,7 +737,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           {collection ? (
             <h1 className="px-1.5 py-1 text-xl font-semibold tracking-tight sm:text-2xl">
-              {collection.title}
+              {props.title ?? collection.title}
             </h1>
           ) : (
             <Breadcrumbs
@@ -861,6 +874,8 @@ export function FolderBrowser(props: FolderBrowserProps) {
             </Button>
           </div>
         </div>
+
+        {props.toolbar}
 
         {/* Clicking empty space clears the selection. */}
         <div

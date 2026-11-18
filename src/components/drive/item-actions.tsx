@@ -19,7 +19,7 @@ import {
 import type { DriveItem } from "@/lib/drive/types";
 
 /** Where the browser is: a folder, or one of the collections in the sidebar. */
-export type BrowserMode = "folder" | "shared" | "starred" | "recent" | "trash";
+export type BrowserMode = "folder" | "search" | "shared" | "starred" | "recent" | "trash";
 
 export interface ItemAction {
   id:

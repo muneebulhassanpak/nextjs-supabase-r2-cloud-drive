@@ -280,7 +280,8 @@ describe("the move picker", () => {
     await upload("client-notes.txt", work);
     expect(names(await searchFolders("lient"))).toEqual(["Clients"]);
     expect(await searchFolders("%")).toEqual([]);
-    expect(await searchFolders("C_ients")).toEqual([]);
+    // Short enough to skip typo matching: as a wildcard, "_" would find "Cli".
+    expect(await searchFolders("C_i")).toEqual([]);
 
     as(viewer);
     expect(await getFolderChoices(work)).toMatchObject({ canEdit: false });
