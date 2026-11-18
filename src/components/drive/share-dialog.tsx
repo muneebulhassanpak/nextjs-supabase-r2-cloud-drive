@@ -166,7 +166,7 @@ function AddPeople({ itemId, onShared }: { itemId: string; onShared: () => void 
       } else {
         setError(result.error.message);
         // Some may have gone before the one that was refused.
-        if (result.error.message.startsWith("Shared with")) onShared();
+        if (result.error.details) onShared();
       }
     });
   }

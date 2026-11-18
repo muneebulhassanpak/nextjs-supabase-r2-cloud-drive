@@ -3,14 +3,15 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 
+import { env } from "@/env";
+import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import { LINK_EXPIRY_CHOICES, type ShareInfo } from "@/lib/sharing/types";
 import { requireUser } from "@/server/auth/session";
 import { actionError, formError, type ActionResult } from "@/server/errors";
-import { requestOrigin } from "@/server/http";
 import {
   createLink,
   getShareInfo,
-  leaveShare,
+  leaveShares,
   removeShare,
   revokeLink,
   setShareRole,
@@ -61,13 +62,14 @@ export async function shareItem(
     itemId,
     list.data,
     parsedRole.data,
-    await requestOrigin(),
+    env.APP_URL,
   );
   if (shared.length > 0) refresh();
   if (problem === undefined) return { ok: true, data: { shared: shared.length } };
   const result = await actionError(problem);
   if (shared.length > 0) {
     result.error.message = `Shared with ${String(shared.length)}. ${result.error.message}`;
+    result.error.details = { shared: shared.length };
   }
   return result;
 }
@@ -107,22 +109,17 @@ export async function removeAccess(
   }
 }
 
-/** "Remove from Shared with me": gives up one's own access to an item shared with them. */
+/** "Remove from Shared with me": gives up one's own access to items shared with them. */
 export async function leaveItems(itemIds: string[]): Promise<ActionResult<{ left: string[] }>> {
   await requireUser();
-  const ids = z.array(id).min(1).max(100).safeParse(itemIds);
+  const ids = z.array(id).min(1).max(ITEMS_PER_REQUEST).safeParse(itemIds);
   if (!ids.success) return notFound();
-  const left: string[] = [];
   try {
-    for (const itemId of ids.data) {
-      await leaveShare(itemId);
-      left.push(itemId);
-    }
+    const left = await leaveShares(ids.data);
+    refresh();
     return { ok: true, data: { left } };
   } catch (error) {
-    return await actionError(error);
-  } finally {
-    if (left.length > 0) refresh();
+    return actionError(error);
   }
 }
 

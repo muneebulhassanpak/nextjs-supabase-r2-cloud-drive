@@ -70,7 +70,14 @@ export async function getShareInfo(itemId: string): Promise<ShareInfo | null> {
       >(),
     supabase.from("share_invites").select("item_id, email, role").in("item_id", scope),
     // An empty list matches nothing, so the top-level case needs no special path.
-    supabase.from("items").select("id, name").in("id", item.ancestors),
+    supabase
+      .from("items")
+      .select(`id, name, owner_id, owner:profiles!items_owner_id_fkey(${PROFILE})`)
+      .in("id", item.ancestors)
+      .overrideTypes<
+        { id: string; name: string; owner_id: string; owner: ProfileRow | null }[],
+        { merge: false }
+      >(),
     canManage
       ? supabase
           .from("share_links")
@@ -82,50 +89,64 @@ export async function getShareInfo(itemId: string): Promise<ShareInfo | null> {
   ]);
   for (const result of [shares, invites, folders, link]) if (result.error) throw result.error;
 
-  const folderNames = new Map((folders.data ?? []).map((row) => [row.id, row.name]));
-  const people = new Map<string, AccessEntry>();
-  const add = (entry: Omit<AccessEntry, "from" | "direct">, sharedOn: string) => {
-    const direct = sharedOn === item.id;
-    const current = people.get(entry.key);
-    const from = direct ? null : { id: sharedOn, name: folderNames.get(sharedOn) ?? "a folder" };
-    if (!current) {
-      people.set(entry.key, { ...entry, from, direct });
-      return;
+  const folderById = new Map((folders.data ?? []).map((row) => [row.id, row]));
+  const folderRef = (id: string) => ({ id, name: folderById.get(id)?.name ?? "a folder" });
+
+  // Per person: their share on the item itself, and the strongest one from a folder above.
+  interface Access {
+    entry: Omit<AccessEntry, "role" | "from" | "direct">;
+    own?: ShareRole;
+    inherited?: { role: ShareRole; from: { id: string; name: string } };
+  }
+  const access = new Map<string, Access>();
+  const grant = (entry: Access["entry"], role: ShareRole, sharedOn: string) => {
+    // The owner already has everything; a share they were given in someone's folder adds nothing.
+    if (entry.key === item.owner_id) return;
+    const current = access.get(entry.key) ?? { entry };
+    if (sharedOn === item.id) current.own = role;
+    else if (!current.inherited || ROLE_RANK[role] > ROLE_RANK[current.inherited.role]) {
+      current.inherited = { role, from: folderRef(sharedOn) };
     }
-    const stronger = ROLE_RANK[entry.role] > ROLE_RANK[current.role];
-    // The strongest role is the one that counts; on a tie, the share on the item itself.
-    if (stronger || (ROLE_RANK[entry.role] === ROLE_RANK[current.role] && direct)) {
-      people.set(entry.key, { ...entry, from, direct: direct || current.direct });
-    } else if (direct) {
-      current.direct = true;
-    }
+    access.set(entry.key, current);
   };
+  // Whoever owns the top folder can edit everything inside it, whoever uploaded it.
+  const topId = item.ancestors[0];
+  const top = topId ? folderById.get(topId) : undefined;
+  if (top && top.owner_id !== item.owner_id) {
+    access.set(top.owner_id, {
+      entry: { kind: "person", key: top.owner_id, person: toPerson(top.owner_id, top.owner) },
+      inherited: { role: "editor", from: folderRef(top.id) },
+    });
+  }
   for (const share of shares.data ?? []) {
-    add(
-      {
-        kind: "person",
-        key: share.user_id,
-        person: toPerson(share.user_id, share.user),
-        role: share.role,
-      },
+    grant(
+      { kind: "person", key: share.user_id, person: toPerson(share.user_id, share.user) },
+      share.role,
       share.item_id,
     );
   }
   for (const invite of invites.data ?? []) {
-    add(
+    grant(
       {
         kind: "invite",
         key: invite.email,
         person: { id: "", name: null, email: invite.email, avatarUrl: null },
-        role: invite.role,
       },
+      invite.role,
       invite.item_id,
     );
   }
 
+  // The share here counts (and can change here) unless a folder above gives more.
+  const people: AccessEntry[] = [...access.values()].map(({ entry, own, inherited }) =>
+    inherited && (own === undefined || ROLE_RANK[inherited.role] > ROLE_RANK[own])
+      ? { ...entry, role: inherited.role, from: inherited.from, direct: false }
+      : { ...entry, role: own ?? "viewer", from: null, direct: true },
+  );
+
   const label = (entry: AccessEntry) =>
     (entry.person.name ?? entry.person.email ?? "").toLowerCase();
-  const others = [...people.values()].sort(
+  const others = people.sort(
     (a, b) =>
       Number(a.kind === "invite") - Number(b.kind === "invite") || label(a).localeCompare(label(b)),
   );
@@ -177,14 +198,16 @@ export async function shareWithPeople(
   }
 
   if (added.length > 0) {
-    const [{ data: item }, { data: me }] = await Promise.all([
+    const [item, me] = await Promise.all([
       supabase.from("items").select("name, kind").eq("id", itemId).single(),
       supabase.from("profiles").select("full_name, email").eq("id", user.id).single(),
     ]);
-    if (item && me) {
-      const sharer = me.full_name ?? me.email;
+    if (item.error || me.error) {
+      logger.warn({ err: item.error ?? me.error, itemId }, "share emails not sent");
+    } else {
+      const sharer = me.data.full_name ?? me.data.email;
       const results = await Promise.allSettled(
-        added.map((to) => sendEmail(shareEmail({ to, sharer, item, role, origin }))),
+        added.map((to) => sendEmail(shareEmail({ to, sharer, item: item.data, role, origin }))),
       );
       for (const result of results) {
         if (result.status === "rejected") {
@@ -277,18 +300,22 @@ export async function removeShare(itemId: string, target: ShareTarget) {
   if (data.length === 0) throw new NotFoundError("That person doesn't have access here.");
 }
 
-/** Removes the signed-in person's own share on an item ("Remove from Shared with me"). */
-export async function leaveShare(itemId: string) {
+/**
+ * Removes the signed-in person's own shares on items ("Remove from Shared with me"), all in one
+ * go. Returns the items left; items that weren't shared with them directly are skipped.
+ */
+export async function leaveShares(itemIds: readonly string[]): Promise<string[]> {
   const user = await requireUser();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("item_shares")
     .delete()
-    .eq("item_id", itemId)
     .eq("user_id", user.id)
+    .in("item_id", itemIds)
     .select("item_id");
   if (error) throw error;
   if (data.length === 0) throw new NotFoundError("That isn't shared with you directly.");
+  return data.map((row) => row.item_id);
 }
 
 /** A new public link token: 32 random bytes, so it can't be guessed. */
