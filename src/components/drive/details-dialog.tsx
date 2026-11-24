@@ -13,8 +13,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Tabs } from "radix-ui";
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 
+import { noFileDrops } from "@/components/files/no-file-drops";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { summarize } from "@/lib/drive/summary";
@@ -56,15 +57,17 @@ export interface DetailsDialogProps {
   /** Where the item stands among the ones on screen, to step through them. */
   position: { index: number; total: number } | null;
   onStep: (by: 1 | -1) => void;
-  /** Changes when access may have changed (the share dialog closed, say), to load it again. */
-  accessVersion: string;
+  /** Changes when access has changed, to load it and the activity again. */
+  accessVersion: number;
+  /** Gets the focus on closing when there's no item to go back to. */
+  returnFocus: RefObject<HTMLElement | null>;
 }
 
 /**
  * About the selected item: what it looks like, its facts, who has access and what happened to it.
  * A window on computers (← and → step through the items) and a bottom sheet on phones.
  */
-export function DetailsDialog({ open, onOpenChange, ...props }: DetailsDialogProps) {
+export function DetailsDialog({ open, onOpenChange, returnFocus, ...props }: DetailsDialogProps) {
   const { selected, position, onStep } = props;
   const title = useRef<HTMLHeadingElement>(null);
 
@@ -83,10 +86,13 @@ export function DetailsDialog({ open, onOpenChange, ...props }: DetailsDialogPro
           "grid-cols-[minmax(0,1fr)] gap-0 overflow-y-auto rounded-3xl p-0 shadow-float sm:max-w-3xl",
           "max-md:top-auto max-md:bottom-0 max-md:max-h-[88dvh] max-md:max-w-full max-md:translate-y-0 max-md:rounded-b-none",
           "md:h-[min(35rem,88dvh)] md:overflow-hidden",
+          // Closes at once: its item may already be gone, leaving nothing to fade out.
+          "data-closed:animate-none",
           selected.length <= 1 && "md:grid-cols-[18rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]",
           selected.length > 1 && "md:h-auto md:max-w-md",
         )}
         onKeyDown={onKeyDown}
+        {...noFileDrops}
         // Reading starts at the title, not at whichever button comes first.
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -95,10 +101,10 @@ export function DetailsDialog({ open, onOpenChange, ...props }: DetailsDialogPro
         onCloseAutoFocus={(event) => {
           // Back to the item, which may not be the one the window was opened on.
           const id = selected[0]?.id;
-          const row = id && document.querySelector<HTMLElement>(`[data-item-id="${id}"]`);
-          if (!row) return;
+          const row =
+            id === undefined ? null : document.querySelector<HTMLElement>(`[data-item-id="${id}"]`);
           event.preventDefault();
-          row.focus();
+          (row ?? returnFocus.current)?.focus();
         }}
       >
         {selected.length > 1 ? (
@@ -111,7 +117,7 @@ export function DetailsDialog({ open, onOpenChange, ...props }: DetailsDialogPro
   );
 }
 
-type TitleRef = React.RefObject<HTMLHeadingElement | null>;
+type TitleRef = RefObject<HTMLHeadingElement | null>;
 
 function Subject({
   selected,
@@ -124,7 +130,7 @@ function Subject({
   onStep,
   accessVersion,
   titleRef,
-}: Omit<DetailsDialogProps, "open" | "onOpenChange"> & { titleRef: TitleRef }) {
+}: Omit<DetailsDialogProps, "open" | "onOpenChange" | "returnFocus"> & { titleRef: TitleRef }) {
   const [tab, setTab] = useState("details");
   const item = selected[0] ?? null;
   const subject = item ?? folder;
@@ -151,7 +157,9 @@ function Subject({
             <Button
               variant="ghost"
               size="icon-sm"
-              disabled={position.index === 0}
+              // Not `disabled`, which would drop the focus, and the arrow keys with it.
+              aria-disabled={position.index === 0}
+              className="aria-disabled:opacity-40"
               onClick={() => {
                 onStep(-1);
               }}
@@ -165,7 +173,8 @@ function Subject({
             <Button
               variant="ghost"
               size="icon-sm"
-              disabled={position.index === position.total - 1}
+              aria-disabled={position.index === position.total - 1}
+              className="aria-disabled:opacity-40"
               onClick={() => {
                 onStep(1);
               }}
@@ -227,7 +236,8 @@ function Subject({
           {/* Nobody else sees things in the trash, so there's no access to list. */}
           {!item?.trashedAt && (
             <AccessSummary
-              key={`${subject.id}:${accessVersion}`}
+              key={subject.id}
+              version={accessVersion}
               itemId={subject.id}
               currentUserId={currentUserId}
             />
@@ -276,7 +286,7 @@ function Subject({
         >
           {/* Reloads when the item changes (a rename made while the tab is open, say). */}
           <ActivityList
-            key={`${subject.id}:${item?.updatedAt ?? ""}`}
+            key={`${subject.id}:${item?.updatedAt ?? ""}:${String(accessVersion)}`}
             itemId={subject.id}
             currentUserId={currentUserId}
           />

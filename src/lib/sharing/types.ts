@@ -34,6 +34,8 @@ export interface ShareInfo {
   people: AccessEntry[];
   /** The live public link, for the owner (it may have expired). */
   link: ShareLinkInfo | null;
+  /** Public links to folders above, which open this too (for the owner; they may have expired). */
+  folderLinks: { from: { id: string; name: string }; expiresAt: string | null }[];
 }
 
 /** How long a new public link lasts, in days; null for no expiry. */

@@ -67,16 +67,26 @@ export function ShareDialog({
   item,
   currentUserId,
   onOpenChange,
+  onChanged,
 }: {
   /** The item being shared; the dialog is open while there is one. */
   item: { id: string; name: string } | null;
   currentUserId: string;
   onOpenChange: (open: boolean) => void;
+  /** Access changed. May come after the dialog has closed, if a change was still being saved. */
+  onChanged: () => void;
 }) {
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
       <DialogContent className="gap-5 sm:max-w-lg">
-        {item && <SharePanel key={item.id} item={item} currentUserId={currentUserId} />}
+        {item && (
+          <SharePanel
+            key={item.id}
+            item={item}
+            currentUserId={currentUserId}
+            onChanged={onChanged}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -85,9 +95,11 @@ export function ShareDialog({
 function SharePanel({
   item,
   currentUserId,
+  onChanged,
 }: {
   item: { id: string; name: string };
   currentUserId: string;
+  onChanged: () => void;
 }) {
   const [info, setInfo] = useState<ShareInfo>();
   const [error, setError] = useState<string>();
@@ -96,6 +108,7 @@ function SharePanel({
   const [, startLoading] = useTransition();
   const reload = () => {
     setVersion((current) => current + 1);
+    onChanged();
   };
 
   useEffect(() => {

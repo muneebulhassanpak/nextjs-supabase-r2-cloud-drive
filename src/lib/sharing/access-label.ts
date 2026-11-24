@@ -5,12 +5,16 @@ import type { ShareInfo } from "./types";
  * else this never claims that nobody else can open it.
  */
 export function accessLabel(
-  info: Pick<ShareInfo, "people" | "link" | "canManage">,
+  info: Pick<ShareInfo, "people" | "link" | "folderLinks">,
   currentUserId: string,
   now: Date,
 ): { title: string; detail: string; isPublic: boolean } {
-  const { link } = info;
-  const isPublic = link !== null && (link.expiresAt === null || new Date(link.expiresAt) > now);
+  const live = (link: { expiresAt: string | null }) =>
+    link.expiresAt === null || new Date(link.expiresAt) > now;
+  const ownLink = info.link !== null && live(info.link);
+  // A link to a folder opens everything inside it.
+  const folderLink = info.folderLinks.find(live);
+  const isPublic = ownLink || folderLink !== undefined;
   const others = info.people
     .filter((entry) => entry.person.id !== currentUserId)
     .map((entry) => entry.person.name ?? entry.person.email ?? "Someone");
@@ -26,7 +30,10 @@ export function accessLabel(
 
   if (isPublic) {
     return {
-      title: "Anyone with the link",
+      title:
+        !ownLink && folderLink
+          ? `Anyone with the link to “${folderLink.from.name}”`
+          : "Anyone with the link",
       detail: who ? `Also shared with ${who}` : "Can view and download",
       isPublic,
     };

@@ -107,7 +107,7 @@ pnpm dev        # http://localhost:3000
 
 | What                                    | Count                          | Command                       |
 | --------------------------------------- | ------------------------------ | ----------------------------- |
-| Unit and integration (Vitest)           | 303, 92% of statements covered | `pnpm test:coverage`          |
+| Unit and integration (Vitest)           | 305, 92% of statements covered | `pnpm test:coverage`          |
 | Database (pgTAP)                        | 442                            | `pnpm db:test`                |
 | Browser (Playwright, desktop and phone) | 65                             | `pnpm build && pnpm test:e2e` |
 

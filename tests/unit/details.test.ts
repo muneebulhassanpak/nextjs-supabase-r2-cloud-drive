@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { positionOf, summarize } from "@/lib/drive/summary";
+import { foldersFirst, positionOf, summarize } from "@/lib/drive/summary";
 import { accessLabel } from "@/lib/sharing/access-label";
-import type { AccessEntry, ShareLinkInfo } from "@/lib/sharing/types";
+import type { AccessEntry, ShareInfo, ShareLinkInfo } from "@/lib/sharing/types";
 
 const NOW = new Date("2026-11-25T12:00:00Z");
 
@@ -15,8 +15,11 @@ const entry = (id: string, name: string | null, email: string | null = null): Ac
   direct: true,
 });
 const me = entry("me", "Me");
-const label = (people: AccessEntry[], link: ShareLinkInfo | null = null) =>
-  accessLabel({ people, link, canManage: true }, "me", NOW);
+const label = (
+  people: AccessEntry[],
+  link: ShareLinkInfo | null = null,
+  folderLinks: ShareInfo["folderLinks"] = [],
+) => accessLabel({ people, link, folderLinks }, "me", NOW);
 const link = (expiresAt: string | null): ShareLinkInfo => ({
   createdAt: "2026-11-01T00:00:00Z",
   expiresAt,
@@ -56,6 +59,16 @@ describe("accessLabel", () => {
     );
   });
 
+  it("is never private while a folder above has a live link", () => {
+    const from = { id: "f", name: "Trip" };
+    expect(label([me], null, [{ from, expiresAt: null }])).toMatchObject({
+      title: "Anyone with the link to “Trip”",
+      isPublic: true,
+    });
+    expect(label([me], link(null), [{ from, expiresAt: null }]).title).toBe("Anyone with the link");
+    expect(label([me], null, [{ from, expiresAt: "2026-11-24T00:00:00Z" }]).title).toBe("Private");
+  });
+
   it("ignores a link that has expired", () => {
     expect(label([me], link("2026-11-24T00:00:00Z"))).toMatchObject({
       title: "Private",
@@ -73,6 +86,18 @@ describe("summarize", () => {
         { kind: "file", size: 5 },
       ]),
     ).toEqual({ folders: 1, files: 2, bytes: 15 });
+  });
+});
+
+describe("foldersFirst", () => {
+  it("keeps the order within folders and within files", () => {
+    const items = [
+      { id: "a", kind: "file" as const },
+      { id: "b", kind: "folder" as const },
+      { id: "c", kind: "file" as const },
+      { id: "d", kind: "folder" as const },
+    ];
+    expect(foldersFirst(items).map((item) => item.id)).toEqual(["b", "d", "a", "c"]);
   });
 });
 
