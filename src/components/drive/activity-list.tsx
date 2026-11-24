@@ -28,6 +28,8 @@ import {
   type ActivityEntry,
 } from "@/lib/drive/activity";
 
+import { SETTLE_MS } from "./settle";
+
 const exact = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 const ICONS: Record<ActivityAction, LucideIcon> = {
@@ -59,18 +61,21 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
 
   useEffect(() => {
     let current = true;
-    startLoading(async () => {
-      const result = await loadActivity(itemId, null);
-      if (!current) return;
-      if (result.ok) {
-        setEntries(result.data.entries);
-        setNext(result.data.next);
-        setError(undefined);
-      } else setError(result.error.message);
-      setLoaded(true);
-    });
+    const timer = setTimeout(() => {
+      startLoading(async () => {
+        const result = await loadActivity(itemId, null);
+        if (!current) return;
+        if (result.ok) {
+          setEntries(result.data.entries);
+          setNext(result.data.next);
+          setError(undefined);
+        } else setError(result.error.message);
+        setLoaded(true);
+      });
+    }, SETTLE_MS);
     return () => {
       current = false;
+      clearTimeout(timer);
     };
   }, [itemId]);
 

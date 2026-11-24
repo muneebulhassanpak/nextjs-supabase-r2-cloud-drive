@@ -59,7 +59,7 @@ export async function getShareInfo(itemId: string): Promise<ShareInfo | null> {
   const canManage = item.owner_id === user.id;
   // Shares on the item and on every folder above it count (the strongest wins).
   const scope = [...item.ancestors, item.id];
-  const [shares, invites, folders, link] = await Promise.all([
+  const [shares, invites, folders, links] = await Promise.all([
     supabase
       .from("item_shares")
       .select(`item_id, user_id, role, user:profiles!item_shares_user_id_fkey(${PROFILE})`)
@@ -81,13 +81,12 @@ export async function getShareInfo(itemId: string): Promise<ShareInfo | null> {
     canManage
       ? supabase
           .from("share_links")
-          .select("created_at, expires_at")
-          .eq("item_id", itemId)
+          .select("item_id, created_at, expires_at")
+          .in("item_id", scope)
           .is("revoked_at", null)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+      : Promise.resolve({ data: [], error: null }),
   ]);
-  for (const result of [shares, invites, folders, link]) if (result.error) throw result.error;
+  for (const result of [shares, invites, folders, links]) if (result.error) throw result.error;
 
   const folderById = new Map((folders.data ?? []).map((row) => [row.id, row]));
   const folderRef = (id: string) => ({ id, name: folderById.get(id)?.name ?? "a folder" });
@@ -159,11 +158,15 @@ export async function getShareInfo(itemId: string): Promise<ShareInfo | null> {
     direct: true,
   };
 
+  const link = links.data?.find((row) => row.item_id === item.id);
   return {
     item: { id: item.id, name: item.name, kind: item.kind },
     canManage,
     people: [owner, ...others],
-    link: link.data && { createdAt: link.data.created_at, expiresAt: link.data.expires_at },
+    link: link ? { createdAt: link.created_at, expiresAt: link.expires_at } : null,
+    folderLinks: (links.data ?? [])
+      .filter((row) => row.item_id !== item.id)
+      .map((row) => ({ from: folderRef(row.item_id), expiresAt: row.expires_at })),
   };
 }
 

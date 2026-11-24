@@ -87,7 +87,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import { groupByOpened } from "@/lib/drive/recent";
 import { sortItems, type Sort, type SortKey } from "@/lib/drive/sort";
-import { positionOf } from "@/lib/drive/summary";
+import { foldersFirst, positionOf } from "@/lib/drive/summary";
 import { PENDING_PREFIX, type Crumb, type DriveItem, type DriveView } from "@/lib/drive/types";
 import { download } from "@/lib/files/api";
 import { cn } from "@/lib/utils";
@@ -265,6 +265,9 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const [previewId, setPreviewId] = useState<string | null>(props.initialPreviewId ?? null);
   const [sheetItem, setSheetItem] = useState<DriveItem | null>(null);
   const uploads = useUploads();
+  const detailsButton = useRef<HTMLButtonElement>(null);
+  // Bumped when access changes, so the details window shows it.
+  const [accessVersion, setAccessVersion] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -282,12 +285,23 @@ export function FolderBrowser(props: FolderBrowserProps) {
   }, [previewId]);
   const selectedSet = new Set(selected.map((item) => item.id));
   const detailsItem = selected.length === 1 ? (selected[0] ?? null) : null;
-  // What ← and → step through in the details window: everything on screen.
-  const steps = useMemo(() => sorted.filter((item) => !pending.has(item.id)), [sorted, pending]);
+  // What ← and → step through in the details window: everything on screen, in the order shown
+  // (the grid puts folders first).
+  const steps = useMemo(() => {
+    const ready = sorted.filter((item) => !pending.has(item.id));
+    return view === "grid" && !groups ? foldersFirst(ready) : ready;
+  }, [sorted, pending, view, groups]);
   const position = detailsItem && positionOf(steps, detailsItem.id);
   // What the Details button is about. If that changes while the window is open (the item is gone,
   // say), the window closes rather than showing something else, now or later.
-  const detailsSubject = selected.length > 0 ? "selection" : folder !== null ? "folder" : null;
+  // Items still being created have no details yet.
+  const detailsSubject = selected.some((item) => pending.has(item.id))
+    ? null
+    : selected.length > 0
+      ? "selection"
+      : folder !== null
+        ? "folder"
+        : null;
   if (details && details !== detailsSubject) setDetails(null);
   const location = folder?.name ?? (props.sharedRoot ? "Shared with me" : "My Drive");
   const context = { mode, canEdit, currentUserId };
@@ -858,6 +872,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
             <Button
               variant="ghost"
               size="icon"
+              ref={detailsButton}
               disabled={!detailsSubject}
               onClick={() => {
                 setDetails(detailsSubject);
@@ -949,7 +964,8 @@ export function FolderBrowser(props: FolderBrowserProps) {
           setSelectedIds(new Set([id]));
           setAnchorId(id);
         }}
-        accessVersion={sharing ? "sharing" : "idle"}
+        accessVersion={accessVersion}
+        returnFocus={detailsButton}
       />
 
       <Sheet
@@ -1031,6 +1047,9 @@ export function FolderBrowser(props: FolderBrowserProps) {
         currentUserId={currentUserId}
         onOpenChange={(isOpen) => {
           if (!isOpen) setSharing(null);
+        }}
+        onChanged={() => {
+          setAccessVersion((current) => current + 1);
         }}
       />
       <AlertDialog

@@ -14,6 +14,14 @@ export function summarize(items: Pick<DriveItem, "kind" | "size">[]): {
   };
 }
 
+/** Folders, then files, each in the order given: how the grid lays them out. */
+export function foldersFirst<T extends Pick<DriveItem, "kind">>(items: T[]): T[] {
+  return [
+    ...items.filter((item) => item.kind === "folder"),
+    ...items.filter((item) => item.kind === "file"),
+  ];
+}
+
 /**
  * Where an item stands among the ones that can be stepped through (not ones still being created),
  * and its neighbour in either direction. Null if it isn't among them.

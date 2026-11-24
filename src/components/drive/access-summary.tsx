@@ -10,16 +10,19 @@ import { initials } from "@/lib/format";
 import { accessLabel } from "@/lib/sharing/access-label";
 import type { ShareInfo } from "@/lib/sharing/types";
 
+import { SETTLE_MS } from "./settle";
+
 const MAX_FACES = 4;
-/** Stepping quickly through items only asks about the one it stops at. */
-const SETTLE_MS = 150;
 
 /** Who can open an item, in one line, with their faces. */
 export function AccessSummary({
   itemId,
   currentUserId,
+  version,
 }: {
   itemId: string;
+  /** Changes when access has changed, to load it again. */
+  version: number;
   currentUserId: string;
 }) {
   const [info, setInfo] = useState<ShareInfo>();
@@ -32,15 +35,17 @@ export function AccessSummary({
       startLoading(async () => {
         const result = await loadShareInfo(itemId);
         if (!current) return;
-        if (result.ok) setInfo(result.data);
-        else setError(result.error.message);
+        if (result.ok) {
+          setInfo(result.data);
+          setError(undefined);
+        } else setError(result.error.message);
       });
     }, SETTLE_MS);
     return () => {
       current = false;
       clearTimeout(timer);
     };
-  }, [itemId]);
+  }, [itemId, version]);
 
   if (error) {
     return (

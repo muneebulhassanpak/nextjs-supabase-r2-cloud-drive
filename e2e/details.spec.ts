@@ -42,6 +42,11 @@ test("step through items, act on one, and come back to its row", async ({ page, 
   );
   await page.getByRole("button", { name: "Next item" }).click();
   await expect(details(page, "Beta")).toContainText("2 of 2");
+  // At the end the button keeps the focus, so the arrow keys still work.
+  await page.keyboard.press("ArrowLeft");
+  await expect(details(page, "Alpha")).toContainText("1 of 2");
+  await page.keyboard.press("ArrowRight");
+  await expect(details(page, "Beta")).toContainText("2 of 2");
   await page.getByRole("tab", { name: "Details" }).click();
 
   // Starring and renaming keep the window open; sharing shows up in it.
@@ -71,6 +76,8 @@ test("step through items, act on one, and come back to its row", async ({ page, 
   await expect(page.getByText("This folder is empty")).toBeVisible();
   await page.getByRole("button", { name: "Details", exact: true }).click();
   await expect(details(page, "Alpha")).toContainText("Empty");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Details", exact: true })).toBeFocused();
 });
 
 test("on a phone, details open as a sheet from the item's menu", async ({ page, isMobile }) => {
