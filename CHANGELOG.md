@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Details open in a window in the middle of the screen (a sheet on phones) instead of a narrow panel on the right. It shows the picture itself, buttons for the common actions, and who has access; the arrow keys step through the items without closing it.
+- Activity is a timeline with an icon for each kind of change.
+- The README covers what the app does, how it works, its security model and how it's tested, with screenshots.
+
 ## [0.9.0] - 2026-11-18
 
 ### Added
