@@ -128,10 +128,8 @@ test("select several with the keyboard and mouse, then trash them", async ({ pag
     await expect(row(page, name)).toHaveAttribute("aria-selected", "true");
   await expect(row(page, "B")).toHaveAttribute("aria-selected", "false");
   await page.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(page.getByRole("complementary", { name: "Details" })).toContainText(
-    "3 items selected",
-  );
-  await page.getByRole("button", { name: "Close details" }).click();
+  await expect(page.getByRole("dialog", { name: "3 items selected" })).toContainText("3 folders");
+  await page.keyboard.press("Escape");
 
   await row(page, "A").focus();
   await page.keyboard.press("Delete");
@@ -141,8 +139,10 @@ test("select several with the keyboard and mouse, then trash them", async ({ pag
 
   await row(page, "B").click();
   await page.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(page.getByRole("complementary", { name: "Details" })).toContainText("Owner");
-  await expect(page.getByRole("complementary", { name: "Details" })).toContainText("You");
+  await expect(page.getByRole("dialog", { name: "B" }).getByRole("definition")).toContainText([
+    "Folder",
+    "You",
+  ]);
 });
 
 test("a folder you can't see looks the same as one that doesn't exist", async ({ page }) => {

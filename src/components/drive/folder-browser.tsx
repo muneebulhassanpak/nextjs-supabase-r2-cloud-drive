@@ -87,13 +87,14 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import { groupByOpened } from "@/lib/drive/recent";
 import { sortItems, type Sort, type SortKey } from "@/lib/drive/sort";
+import { positionOf } from "@/lib/drive/summary";
 import { PENDING_PREFIX, type Crumb, type DriveItem, type DriveView } from "@/lib/drive/types";
 import { download } from "@/lib/files/api";
 import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/server/errors";
 
 import { Breadcrumbs } from "./breadcrumbs";
-import { DetailsPanel } from "./details-panel";
+import { DetailsDialog } from "./details-dialog";
 import { actionsFor, type BrowserMode, type ItemAction } from "./item-actions";
 import { ItemIcon } from "./item-icon";
 import { GridView, ListView } from "./item-views";
@@ -215,7 +216,7 @@ export interface FolderBrowserProps {
 }
 
 /**
- * The file browser: list or grid, selection, menus and the details panel. Changes show at once
+ * The file browser: list or grid, selection, menus and the details window. Changes show at once
  * (optimistic) and roll back with a message if the server refuses them.
  */
 export function FolderBrowser(props: FolderBrowserProps) {
@@ -225,7 +226,6 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const router = useRouter();
   const pathname = usePathname();
   const isTouch = useMediaQuery("(pointer: coarse)");
-  const isWide = useMediaQuery("(min-width: 1024px)");
 
   const [items, change] = useOptimistic(props.items, applyChange);
   // Shared with me, Recent and Trash keep the server's order: newest first.
@@ -260,7 +260,8 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const [confirm, setConfirm] = useState<
     { kind: "delete"; items: DriveItem[] } | { kind: "empty" } | null
   >(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // The details window, and what it's about: the selection, or the folder being looked at.
+  const [details, setDetails] = useState<"selection" | "folder" | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(props.initialPreviewId ?? null);
   const [sheetItem, setSheetItem] = useState<DriveItem | null>(null);
   const uploads = useUploads();
@@ -281,6 +282,13 @@ export function FolderBrowser(props: FolderBrowserProps) {
   }, [previewId]);
   const selectedSet = new Set(selected.map((item) => item.id));
   const detailsItem = selected.length === 1 ? (selected[0] ?? null) : null;
+  // What ← and → step through in the details window: everything on screen.
+  const steps = useMemo(() => sorted.filter((item) => !pending.has(item.id)), [sorted, pending]);
+  const position = detailsItem && positionOf(steps, detailsItem.id);
+  // What the Details button is about. If that changes while the window is open (the item is gone,
+  // say), the window closes rather than showing something else, now or later.
+  const detailsSubject = selected.length > 0 ? "selection" : folder !== null ? "folder" : null;
+  if (details && details !== detailsSubject) setDetails(null);
   const location = folder?.name ?? (props.sharedRoot ? "Shared with me" : "My Drive");
   const context = { mode, canEdit, currentUserId };
   const owned = items.filter((item) => item.owner.id === currentUserId);
@@ -576,7 +584,7 @@ export function FolderBrowser(props: FolderBrowserProps) {
     else if (first && action === "share") setSharing(first);
     else if (first && action === "details") {
       setSelectedIds(new Set([first.id]));
-      setDetailsOpen(true);
+      setDetails("selection");
     }
   }
 
@@ -695,20 +703,6 @@ export function FolderBrowser(props: FolderBrowserProps) {
     renderMore,
     wrapContextMenu,
   };
-
-  const details = (
-    <DetailsPanel
-      item={detailsItem}
-      selectedCount={selected.length}
-      location={mode === "folder" ? location : undefined}
-      folder={folder}
-      currentUserId={currentUserId}
-      onClose={() => {
-        setDetailsOpen(false);
-      }}
-      showClose={isWide}
-    />
-  );
 
   return (
     <div
@@ -864,9 +858,9 @@ export function FolderBrowser(props: FolderBrowserProps) {
             <Button
               variant="ghost"
               size="icon"
-              aria-pressed={detailsOpen}
+              disabled={!detailsSubject}
               onClick={() => {
-                setDetailsOpen(!detailsOpen);
+                setDetails(detailsSubject);
               }}
             >
               <Info />
@@ -917,14 +911,6 @@ export function FolderBrowser(props: FolderBrowserProps) {
         </div>
       </div>
 
-      {detailsOpen && isWide && (
-        <aside
-          aria-label="Details"
-          className="sticky top-20 hidden w-80 shrink-0 self-start rounded-xl border p-4 lg:block"
-        >
-          {details}
-        </aside>
-      )}
       {previewId && (
         <FilePreview
           files={previewFiles}
@@ -934,15 +920,37 @@ export function FolderBrowser(props: FolderBrowserProps) {
           onDownload={downloadFile}
         />
       )}
-      <Sheet open={detailsOpen && !isWide} onOpenChange={setDetailsOpen}>
-        <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl p-6">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Details</SheetTitle>
-            <SheetDescription>About the selected item</SheetDescription>
-          </SheetHeader>
-          {details}
-        </SheetContent>
-      </Sheet>
+      <DetailsDialog
+        open={details !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setDetails(null);
+        }}
+        selected={selected}
+        folder={folder && { ...folder, count: items.length }}
+        location={mode === "folder" ? location : undefined}
+        currentUserId={currentUserId}
+        actions={detailsItem ? actionsFor([detailsItem], context) : []}
+        onAction={(action) => {
+          if (!detailsItem) return;
+          // Sharing, renaming and starring come back to the window; the rest leave it behind.
+          const stays =
+            action === "share" ||
+            action === "rename" ||
+            action === "download" ||
+            action === "star" ||
+            (action === "unstar" && mode !== "starred");
+          if (!stays) setDetails(null);
+          run(action, [detailsItem]);
+        }}
+        position={position}
+        onStep={(by) => {
+          const id = by === 1 ? position?.next : position?.previous;
+          if (!id) return;
+          setSelectedIds(new Set([id]));
+          setAnchorId(id);
+        }}
+        accessVersion={sharing ? "sharing" : "idle"}
+      />
 
       <Sheet
         open={sheetItem !== null}
