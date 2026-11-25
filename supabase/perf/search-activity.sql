@@ -36,8 +36,12 @@ explain (analyze, costs off, timing off, summary on) select * from public.search
 select count(*) as owner_invo from public.search_items('invo');
 select count(*) as owner_typo from public.search_items('invoce');
 select count(*) as owner_filtered from public.search_items('rep', 'pdf', 'me', now() - interval '7 days');
+select count(*) as owner_screen from public.my_activity();
+select count(*) as owner_screen_filtered from public.my_activity('trash', 'others');
 select tests.authenticate_as('editor');
 select count(*) as editor_invo from public.search_items('invo');
+select count(*) as editor_screen from public.my_activity();
+select count(*) as editor_screen_filtered from public.my_activity('trash', 'others');
 select count(*) as editor_folder_activity
 from public.item_activity((select id from public.items where name = 'Folder 7'));
 select tests.authenticate_as('other');
