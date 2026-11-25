@@ -95,6 +95,18 @@ function getCommand(
   });
 }
 
+/** Stores bytes the server itself has (the demo's files; people's uploads go straight there). */
+export async function putObject(key: string, body: Uint8Array, contentType: string): Promise<void> {
+  await storage.send(
+    new PutObjectCommand({
+      Bucket: env.STORAGE_BUCKET,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+}
+
 /** What storage holds under a key, or null if nothing arrived. */
 export async function headObject(
   key: string,

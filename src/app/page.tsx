@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { DemoButton } from "@/components/demo-button";
 import { DemoCarousel } from "@/components/marketing/demo-carousel";
 import {
   DriveMockup,
@@ -187,7 +188,7 @@ export default function HomePage() {
                       <p
                         className={
                           highlight
-                            ? "mt-2 text-sm text-brand-foreground/80"
+                            ? "mt-2 text-sm text-brand-foreground/90"
                             : "mt-2 text-sm text-muted-foreground"
                         }
                       >
@@ -295,7 +296,7 @@ export default function HomePage() {
                 <h2 id="start-heading" className="text-headline text-balance">
                   Start with 100 MB, free
                 </h2>
-                <p className="text-pretty text-brand-foreground/80">
+                <p className="text-pretty text-brand-foreground/90">
                   Create an account, confirm your email, and upload your first file in a minute.
                 </p>
                 <Link
@@ -327,9 +328,8 @@ function Hero() {
               </span>
               Private by default
             </span>
-            <h1 className="text-display text-balance stagger-1 motion-safe:animate-enter">
-              Your files, safe and always within reach
-            </h1>
+            {/* Not faded in: it's the first thing people read, and what the page is timed by. */}
+            <h1 className="text-display text-balance">Your files, safe and always within reach</h1>
             <p className="max-w-lg text-lg text-pretty text-muted-foreground stagger-2 motion-safe:animate-enter">
               Upload, organise, preview and share files from any device. Every folder stays private
               until you choose otherwise.
@@ -339,15 +339,13 @@ function Hero() {
                 Create a free account
                 <ArrowRight data-icon="inline-end" aria-hidden />
               </Link>
-              <Link href="/sign-in" className={buttonVariants({ size: "xl", variant: "outline" })}>
-                Sign in
-              </Link>
+              <DemoButton size="xl" variant="outline" />
             </div>
             <div className="mt-4 grid w-full max-w-md grid-cols-2 gap-4 stagger-4 motion-safe:animate-enter">
               <FolderCard tone="brand">
                 <HardDrive className="size-5 opacity-80" aria-hidden />
                 <p className="mt-6 text-title whitespace-nowrap sm:text-headline">100 MB</p>
-                <p className="text-sm text-brand-foreground/80">free to start</p>
+                <p className="text-sm text-brand-foreground/90">free to start</p>
               </FolderCard>
               <FolderCard tone="card">
                 <Link2 className="size-5 text-primary" aria-hidden />

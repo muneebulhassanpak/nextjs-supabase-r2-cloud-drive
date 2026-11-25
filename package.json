@@ -1,6 +1,6 @@
 {
   "name": "lockerly",
-  "version": "0.10.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -55,6 +55,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.1",
     "@playwright/test": "^1.65.0",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^22",

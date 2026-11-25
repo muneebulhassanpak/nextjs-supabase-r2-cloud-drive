@@ -274,6 +274,9 @@ isOneToOne: false
 "purge_trash":
 { Args: { "p_limit"?: number,"p_older_than"?: string }; Returns: string[]
                            },
+"reset_demo":
+{ Args: { "p_activity": Json,"p_items": Json,"p_links": Json,"p_people": Json,"p_shares": Json,"p_stars": Json }; Returns: undefined
+                           },
 "resolve_share_link":
 { Args: { "p_token": string }; Returns: {
               "category": Database["public"]['Enums']["item_category"],"id": string,"kind": Database["public"]['Enums']["item_kind"],"mime_type": string,"name": string,"size": number,"updated_at": string
