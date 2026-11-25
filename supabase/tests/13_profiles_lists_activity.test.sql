@@ -116,11 +116,11 @@ select tests.authenticate_as('owner');
 select is(
   tests.rows($$select tests.label(item_id) || ':' || action from public.activity
                where item_id in (select id from tests.ids where label in ('F', 'f1', 'R'))$$),
-  tests.sorted('{F:created,F:shared,F:link_created,f1:uploaded,f1:link_created,f1:renamed,R:uploaded,R:shared}'),
+  tests.sorted('{F:created,F:shared,F:invited,F:link_created,f1:uploaded,f1:link_created,f1:renamed,f1:unstarred,R:uploaded,R:shared}'),
   'owner sees the whole history of their items');
 select tests.authenticate_as('viewer');
 select is(
-  tests.rows($$select distinct tests.label(item_id) from public.activity$$),
+  tests.rows($$select distinct tests.label(item_id) from public.activity where item_id is not null$$),
   tests.sorted('{Sub,Deep,f2,f4,VR}'),
   'viewer sees activity only on items they can see');
 select tests.authenticate_as('stranger');

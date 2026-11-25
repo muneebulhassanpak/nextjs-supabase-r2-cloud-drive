@@ -79,7 +79,9 @@ select is(
     'empty_trash()',
     'item_access_role(uuid)',
     'item_activity(uuid,timestamp with time zone,bigint,integer)',
+    'log_download(uuid)',
     'move_item(uuid,uuid)',
+    'my_activity(text,text,timestamp with time zone,bigint,integer)',
     'ping()',
     'resolve_share_link(text)',
     'restore_item(uuid)',
@@ -105,6 +107,7 @@ select is(
   array[
     'private.can_see_profile(uuid)',
     'private.is_item_owner(uuid)',
+    'private.is_personal_activity(activity_action)',
     'private.item_access(uuid)',
     'private.item_role(uuid,uuid,uuid[])'
   ],
