@@ -7,6 +7,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- "Try the demo": one click opens a shared drive with every kind of file, sharing and history. It goes back to how it was every day. The account can't be taken over or changed, shares only with the demo's other person, and its public links last a day at most.
+- Keyboard shortcuts: `/` to search, `N` for a new folder, `?` for the list.
+- Pages for unknown addresses and unexpected errors.
+- Security headers: no site can frame the app, and browsers don't guess file types.
+- Browser tests check every screen for accessibility problems, in light and dark.
+
+### Changed
+
+- The landing page loads its clips only when they're close, so it opens much faster (Lighthouse performance from 84 to 94–100).
+
+### Fixed
+
+- Accessibility: low contrast on the landing page, unclear names for two links, and the list of facts in the details window.
+
 ## [0.10.0] - 2026-11-25
 
 ### Added
