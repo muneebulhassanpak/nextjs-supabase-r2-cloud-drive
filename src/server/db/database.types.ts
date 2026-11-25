@@ -275,7 +275,7 @@ isOneToOne: false
 { Args: { "p_limit"?: number,"p_older_than"?: string }; Returns: string[]
                            },
 "reset_demo":
-{ Args: { "p_activity": Json,"p_items": Json,"p_people": Json,"p_shares": Json,"p_stars": Json }; Returns: undefined
+{ Args: { "p_activity": Json,"p_items": Json,"p_links": Json,"p_people": Json,"p_shares": Json,"p_stars": Json }; Returns: undefined
                            },
 "resolve_share_link":
 { Args: { "p_token": string }; Returns: {

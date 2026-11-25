@@ -9,7 +9,14 @@ import { createAdminClient } from "@/server/db/admin";
 import { logger } from "@/server/logger";
 import { deleteObjects, listObjectsBefore, putObject } from "@/server/storage/objects";
 
-import { DEMO_EVENTS, DEMO_ITEMS, DEMO_SHARES, DEMO_STARS, type DemoPerson } from "./demo-content";
+import {
+  DEMO_EVENTS,
+  DEMO_ITEMS,
+  DEMO_LINKS,
+  DEMO_SHARES,
+  DEMO_STARS,
+  type DemoPerson,
+} from "./demo-content";
 
 // A daily job, not a user request, so it uses the admin client (no row-level security). It only
 // touches the two demo accounts, found by their fixed addresses.
@@ -29,16 +36,26 @@ export interface DemoReport {
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-/** The account with this address, made if there isn't one. */
+/**
+ * The account with this address, made if there isn't one. One made by hand gets its password set
+ * before it's locked; once locked, changing it (a new DEMO_PASSWORD) means unsetting is_demo first.
+ */
 async function account(admin: Admin, person: DemoPerson): Promise<string> {
   const { email, fullName } = PEOPLE[person];
-  const found = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
+  const found = await admin.from("profiles").select("id, is_demo").eq("email", email).maybeSingle();
   if (found.error) throw found.error;
-  if (found.data) return found.data.id;
+  // Nobody signs in as the second person.
+  const password = person === "alex" ? env.DEMO_PASSWORD : randomBytes(24).toString("base64url");
+  if (found.data) {
+    if (!found.data.is_demo) {
+      const updated = await admin.auth.admin.updateUserById(found.data.id, { password });
+      if (updated.error) throw updated.error;
+    }
+    return found.data.id;
+  }
   const { data, error } = await admin.auth.admin.createUser({
     email,
-    // Nobody signs in as the second person.
-    password: person === "alex" ? env.DEMO_PASSWORD : randomBytes(24).toString("base64url"),
+    password,
     email_confirm: true,
     user_metadata: { full_name: fullName },
   });
@@ -67,8 +84,9 @@ export async function resetDemo(now = new Date()): Promise<DemoReport> {
     return found;
   };
 
-  // 1. The bytes, always under the same keys: a file's row never points at nothing, and resets
-  //    leave nothing behind.
+  // 1. The bytes, always under the same keys, so a file's row never points at nothing. Stored
+  //    again after the rows are in, in case a visitor deleted one of them meanwhile.
+  const uploads: (() => Promise<void>)[] = [];
   const items = await Promise.all(
     DEMO_ITEMS.map(async (item) => {
       const ownerId = ids[item.owner];
@@ -77,7 +95,10 @@ export async function resetDemo(now = new Date()): Promise<DemoReport> {
       if (item.file && item.type && objectKey) {
         // eslint-disable-next-line security/detect-non-literal-fs-filename -- names from demo-content.ts
         const bytes = await readFile(join(process.cwd(), "fixtures", item.file));
-        await putObject(objectKey, bytes, item.type);
+        const type = item.type;
+        const store = () => putObject(objectKey, bytes, type);
+        uploads.push(store);
+        await store();
         size = bytes.byteLength;
       }
       return {
@@ -96,6 +117,7 @@ export async function resetDemo(now = new Date()): Promise<DemoReport> {
   );
 
   // 2. The rows, all at once.
+  const replacedAt = new Date();
   const { error } = await admin.rpc("reset_demo", {
     p_people: (["alex", "sam"] as const).map((person) => ({
       id: ids[person],
@@ -107,6 +129,11 @@ export async function resetDemo(now = new Date()): Promise<DemoReport> {
       user_id: ids[share.with],
       role: share.role,
       created_at: ago(share.hoursAgo),
+    })),
+    p_links: DEMO_LINKS.map((item) => ({
+      item_id: id(item),
+      // Nobody has the link itself: people see it's on, and can replace it.
+      token_hash: randomBytes(32).toString("hex"),
     })),
     p_stars: DEMO_STARS.map((star) => ({
       user_id: ids[star.by],
@@ -136,14 +163,15 @@ export async function resetDemo(now = new Date()): Promise<DemoReport> {
     ],
   });
   if (error) throw error;
+  await Promise.all(uploads.map((store) => store()));
 
-  // 3. What visitors uploaded (uploads still on their way lost their rows too), and any
-  //    second factor someone added.
+  // 3. What visitors uploaded before that (later uploads have rows), and any second factor someone
+  //    added.
   const keep = new Set(items.map((item) => item.object_key));
   const report: DemoReport = { items: items.length, removedObjects: 0, failedDeletes: 0 };
   for (const ownerId of Object.values(ids)) {
     for (const prefix of [`u/${ownerId}/`, `a/${ownerId}/`]) {
-      for await (const keys of listObjectsBefore(new Date(Date.now() + HOUR), prefix)) {
+      for await (const keys of listObjectsBefore(replacedAt, prefix)) {
         const extra = keys.filter((key) => !keep.has(key));
         report.removedObjects += extra.length;
         report.failedDeletes += (await deleteObjects(extra)).length;

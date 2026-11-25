@@ -106,13 +106,13 @@ set search_path = ''
 as $$
 begin
   if private.is_demo(new.created_by) then
-    new.expires_at := least(new.expires_at, now() + interval '1 day');
+    new.expires_at := least(new.expires_at, new.created_at + interval '1 day');
   end if;
   return new;
 end;
 $$;
 
-create trigger share_links_limit_demo before insert on public.share_links
+create trigger share_links_limit_demo before insert or update of expires_at on public.share_links
   for each row execute function private.limit_demo_link();
 
 -- Activity -----------------------------------------------------------------------------------------
@@ -149,6 +149,7 @@ create function public.reset_demo(
   p_people jsonb, -- [{id, full_name}]
   p_items jsonb, -- [{id, owner_id, parent_id, kind, name, size, mime_type, object_key, created_at, trashed_at}]
   p_shares jsonb, -- [{item_id, user_id, role, created_at}]
+  p_links jsonb, -- [{item_id, token_hash}]
   p_stars jsonb, -- [{user_id, item_id, created_at}]
   p_activity jsonb -- [{item_id, actor_id, action, details, created_at}]
 )
@@ -196,6 +197,10 @@ begin
   select d.item_id, d.user_id, d.role, i.owner_id, d.created_at
   from jsonb_to_recordset(p_shares) as d (item_id uuid, user_id uuid, role public.share_role, created_at timestamptz)
   join public.items i on i.id = d.item_id;
+  insert into public.share_links (item_id, token_hash, created_by)
+  select d.item_id, decode(d.token_hash, 'hex'), i.owner_id
+  from jsonb_to_recordset(p_links) as d (item_id uuid, token_hash text)
+  join public.items i on i.id = d.item_id;
   insert into public.stars (user_id, item_id, created_at)
   select d.user_id, d.item_id, d.created_at
   from jsonb_to_recordset(p_stars) as d (user_id uuid, item_id uuid, created_at timestamptz);
@@ -211,7 +216,7 @@ begin
 end;
 $$;
 
-comment on function public.reset_demo(jsonb, jsonb, jsonb, jsonb, jsonb) is
+comment on function public.reset_demo(jsonb, jsonb, jsonb, jsonb, jsonb, jsonb) is
   'Puts the demo accounts back as they were (the daily job only).';
 
 revoke execute on function
@@ -220,6 +225,6 @@ revoke execute on function
   private.lock_demo_profile(),
   private.check_demo_share(),
   private.limit_demo_link(),
-  public.reset_demo(jsonb, jsonb, jsonb, jsonb, jsonb)
+  public.reset_demo(jsonb, jsonb, jsonb, jsonb, jsonb, jsonb)
 from public, anon, authenticated;
-grant execute on function public.reset_demo(jsonb, jsonb, jsonb, jsonb, jsonb) to service_role;
+grant execute on function public.reset_demo(jsonb, jsonb, jsonb, jsonb, jsonb, jsonb) to service_role;

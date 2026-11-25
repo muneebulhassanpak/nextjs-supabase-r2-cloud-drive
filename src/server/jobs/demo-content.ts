@@ -225,6 +225,9 @@ export const DEMO_SHARES: readonly {
   { item: "handbook-folder", with: "alex", role: "viewer", hoursAgo: 12 * DAY - 3 },
 ];
 
+/** Items with a public link. */
+export const DEMO_LINKS: readonly string[] = ["photos"];
+
 export const DEMO_STARS: readonly { item: string; by: DemoPerson; hoursAgo: number }[] = [
   { item: "projects", by: "alex", hoursAgo: 7 * DAY },
   { item: "budget", by: "alex", hoursAgo: 6 * DAY },
@@ -234,7 +237,7 @@ export const DEMO_STARS: readonly { item: string; by: DemoPerson; hoursAgo: numb
 export const DEMO_EVENTS: readonly {
   item: string;
   by: DemoPerson;
-  action: "renamed" | "moved" | "trashed" | "shared" | "starred" | "downloaded";
+  action: "renamed" | "moved" | "trashed" | "shared" | "starred" | "downloaded" | "link_created";
   hoursAgo: number;
   details?: Record<string, string | null>;
   /** Whose account `details.user_id` is, and which folders `details.from` and `to` are. */
@@ -277,4 +280,5 @@ export const DEMO_EVENTS: readonly {
     details: { from: "Checklist.md", to: "Release checklist.md" },
   },
   { item: "handbook", by: "alex", action: "downloaded", hoursAgo: 5 },
+  { item: "photos", by: "alex", action: "link_created", hoursAgo: 10 },
 ];
