@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, HardDrive, Star, Trash2, Users } from "lucide-react";
+import { Clock, HardDrive, History, Star, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
@@ -12,6 +12,7 @@ export const NAV_ITEMS = [
   { href: "/drive/shared", label: "Shared with me", icon: Users },
   { href: "/drive/recent", label: "Recent", icon: Clock },
   { href: "/drive/starred", label: "Starred", icon: Star },
+  { href: "/drive/activity", label: "Activity", icon: History },
   { href: "/drive/trash", label: "Trash", icon: Trash2 },
 ] as const;
 

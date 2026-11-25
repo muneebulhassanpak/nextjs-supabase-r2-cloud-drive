@@ -12,3 +12,15 @@ export function formatModified(iso: string, now = new Date()): string {
     ? timeFormat.format(date)
     : dateFormat.format(date);
 }
+
+const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
+
+/** "Nov 14, 2026, 3:05 PM" in the viewer's time zone (client components only). */
+export function formatDateTime(iso: string): string {
+  return dateTimeFormat.format(new Date(iso));
+}
+
+/** "3:05 PM" in the viewer's time zone (client components only). */
+export function formatTime(iso: string): string {
+  return timeFormat.format(new Date(iso));
+}

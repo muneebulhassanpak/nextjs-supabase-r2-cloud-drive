@@ -339,6 +339,10 @@ describe("public links", () => {
     await expect(revokeLink(photos)).rejects.toThrow("no link to turn off");
     as(owner);
     expect((await getShareInfo(photos))?.link?.expiresAt).toBeTruthy();
+    // It opens what's inside too, which the owner sees there.
+    const inside = await getShareInfo(await folder("Inside", photos));
+    expect(inside?.link).toBeNull();
+    expect(inside?.folderLinks).toMatchObject([{ from: { id: photos } }]);
   });
 
   it("stops the old link when a new one is made, and both when it's turned off", async () => {

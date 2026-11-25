@@ -5,6 +5,7 @@ import type { Disposition } from "@/lib/files/rules";
 import { requireApiUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
 import { NotFoundError, pgErrorCode } from "@/server/errors";
+import { logger } from "@/server/logger";
 import {
   DOWNLOAD_URL_TTL,
   signDownload,
@@ -45,6 +46,13 @@ export async function getFileUrl(
   disposition: Disposition,
 ): Promise<{ url: string; expiresIn: number }> {
   return signFileUrl(await readableFile(id), disposition);
+}
+
+/** Adds a download to the person's activity. A download that can't be logged still goes ahead. */
+export async function logDownload(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("log_download", { p_item_id: id });
+  if (error) logger.warn({ code: error.code }, "download not logged");
 }
 
 /** Signs a storage link for a file the caller has already been allowed to read. */

@@ -7,14 +7,14 @@ export type Database = {
           Tables: {
             "activity": {
                   Row: {
-                    "action": Database["public"]['Enums']["activity_action"],"actor_id": string | null,"created_at": string,"details": NonNullable<Json>,"id": number,"item_id": string
+                    "action": Database["public"]['Enums']["activity_action"],"actor_id": string | null,"created_at": string,"details": NonNullable<Json>,"id": number,"item_id": string | null,"item_kind": Database["public"]['Enums']["item_kind"] | null,"item_name": string | null,"owner_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "action": Database["public"]['Enums']["activity_action"],"actor_id"?: string | null,"created_at"?: string,"details"?: NonNullable<Json>,"id"?: never,"item_id": string
+                    "action": Database["public"]['Enums']["activity_action"],"actor_id"?: string | null,"created_at"?: string,"details"?: NonNullable<Json>,"id"?: never,"item_id"?: string | null,"item_kind"?: Database["public"]['Enums']["item_kind"] | null,"item_name"?: string | null,"owner_id": string
                   }
                   Update: {
-                    "action"?: Database["public"]['Enums']["activity_action"],"actor_id"?: string | null,"created_at"?: string,"details"?: NonNullable<Json>,"id"?: never,"item_id"?: string
+                    "action"?: Database["public"]['Enums']["activity_action"],"actor_id"?: string | null,"created_at"?: string,"details"?: NonNullable<Json>,"id"?: never,"item_id"?: string | null,"item_kind"?: Database["public"]['Enums']["item_kind"] | null,"item_name"?: string | null,"owner_id"?: string
                   }
                   Relationships: [
                     {
@@ -28,6 +28,12 @@ isOneToOne: false
       columns: ["item_id"]
 isOneToOne: false
       referencedRelation: "items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "activity_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -251,8 +257,16 @@ isOneToOne: false
               "action": Database["public"]['Enums']["activity_action"],"actor_email": string,"actor_id": string,"actor_name": string,"created_at": string,"details": Json,"from_name": string,"id": number,"item_id": string,"item_kind": Database["public"]['Enums']["item_kind"],"item_name": string,"person_email": string,"person_name": string,"to_name": string
             }[]
                            },
+"log_download":
+{ Args: { "p_item_id": string }; Returns: undefined
+                           },
 "move_item":
 { Args: { "p_item_id": string,"p_parent_id": string }; Returns: undefined
+                           },
+"my_activity":
+{ Args: { "p_before_at"?: string,"p_before_id"?: number,"p_limit"?: number,"p_type"?: string,"p_who"?: string }; Returns: {
+              "action": Database["public"]['Enums']["activity_action"],"actor_email": string,"actor_id": string,"actor_name": string,"created_at": string,"details": Json,"from_name": string,"id": number,"item_id": string,"item_kind": Database["public"]['Enums']["item_kind"],"item_listed": boolean,"item_name": string,"item_trashed": boolean,"person_email": string,"person_name": string,"to_name": string
+            }[]
                            },
 "ping":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -358,7 +372,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "access_role": "viewer"|"editor"|"owner","activity_action": "created"|"uploaded"|"renamed"|"moved"|"trashed"|"restored"|"shared"|"share_changed"|"unshared"|"link_created"|"link_revoked","drive_view": "grid"|"list","item_category": "image"|"video"|"audio"|"pdf"|"document"|"spreadsheet"|"presentation"|"text"|"archive"|"other","item_kind": "folder"|"file","item_status": "pending"|"ready","share_role": "viewer"|"editor"
+            "access_role": "viewer"|"editor"|"owner","activity_action": "created"|"uploaded"|"renamed"|"moved"|"trashed"|"restored"|"shared"|"share_changed"|"unshared"|"link_created"|"link_revoked"|"deleted"|"invited"|"invite_changed"|"invite_removed"|"starred"|"unstarred"|"downloaded"|"signed_in"|"name_changed"|"picture_changed"|"password_changed","drive_view": "grid"|"list","item_category": "image"|"video"|"audio"|"pdf"|"document"|"spreadsheet"|"presentation"|"text"|"archive"|"other","item_kind": "folder"|"file","item_status": "pending"|"ready","share_role": "viewer"|"editor"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -474,7 +488,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "access_role": ["viewer", "editor", "owner"],"activity_action": ["created", "uploaded", "renamed", "moved", "trashed", "restored", "shared", "share_changed", "unshared", "link_created", "link_revoked"],"drive_view": ["grid", "list"],"item_category": ["image", "video", "audio", "pdf", "document", "spreadsheet", "presentation", "text", "archive", "other"],"item_kind": ["folder", "file"],"item_status": ["pending", "ready"],"share_role": ["viewer", "editor"]
+            "access_role": ["viewer", "editor", "owner"],"activity_action": ["created", "uploaded", "renamed", "moved", "trashed", "restored", "shared", "share_changed", "unshared", "link_created", "link_revoked", "deleted", "invited", "invite_changed", "invite_removed", "starred", "unstarred", "downloaded", "signed_in", "name_changed", "picture_changed", "password_changed"],"drive_view": ["grid", "list"],"item_category": ["image", "video", "audio", "pdf", "document", "spreadsheet", "presentation", "text", "archive", "other"],"item_kind": ["folder", "file"],"item_status": ["pending", "ready"],"share_role": ["viewer", "editor"]
           }
         }
 } as const

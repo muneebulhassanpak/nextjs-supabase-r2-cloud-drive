@@ -2,10 +2,11 @@
 
 import { ArrowLeft, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { useEffect, type DragEvent } from "react";
+import { useEffect } from "react";
 
 import { ItemIcon } from "@/components/drive/item-icon";
 import { useFileAccess } from "@/components/files/file-access";
+import { noFileDrops } from "@/components/files/no-file-drops";
 import { Button } from "@/components/ui/button";
 import type { DriveItem } from "@/lib/drive/types";
 import { cn } from "@/lib/utils";
@@ -90,13 +91,7 @@ export function FilePreview({
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-neutral-950 data-open:animate-in data-open:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          // Files dragged over a preview aren't uploads, and mustn't open in the browser either.
-          onDragEnter={refuseDrag}
-          onDragOver={refuseDrag}
-          onDrop={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
+          {...noFileDrops}
           className="fixed inset-0 z-50 flex flex-col text-white outline-none data-open:animate-in data-open:fade-in-0"
         >
           <header className="flex items-center gap-2 px-2 py-2 sm:px-4">
@@ -160,12 +155,6 @@ export function FilePreview({
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
-}
-
-function refuseDrag(event: DragEvent) {
-  event.preventDefault();
-  event.stopPropagation();
-  event.dataTransfer.dropEffect = "none";
 }
 
 function StepButton({

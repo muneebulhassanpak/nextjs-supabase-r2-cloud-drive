@@ -13,7 +13,11 @@ import {
   type ActivityEntry,
 } from "@/lib/drive/activity";
 
+import { ACTIVITY_ICONS } from "./activity-icons";
+import { SETTLE_MS } from "./settle";
+
 const exact = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+
 /**
  * What happened to an item, newest first; for a folder, to everything inside it too. Loads a page
  * at a time; the time shows exactly on hover.
@@ -29,18 +33,21 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
 
   useEffect(() => {
     let current = true;
-    startLoading(async () => {
-      const result = await loadActivity(itemId, null);
-      if (!current) return;
-      if (result.ok) {
-        setEntries(result.data.entries);
-        setNext(result.data.next);
-        setError(undefined);
-      } else setError(result.error.message);
-      setLoaded(true);
-    });
+    const timer = setTimeout(() => {
+      startLoading(async () => {
+        const result = await loadActivity(itemId, null);
+        if (!current) return;
+        if (result.ok) {
+          setEntries(result.data.entries);
+          setNext(result.data.next);
+          setError(undefined);
+        } else setError(result.error.message);
+        setLoaded(true);
+      });
+    }, SETTLE_MS);
     return () => {
       current = false;
+      clearTimeout(timer);
     };
   }, [itemId]);
 
@@ -75,23 +82,35 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
   }
   return (
     <div className="grid gap-3">
-      <ol aria-label="Activity" className="grid gap-4">
-        {entries.map((entry) => (
-          <li key={entry.id} className="grid gap-0.5 text-sm">
-            <p className="wrap-anywhere">
-              <span className="font-medium">{actorLabel(entry, currentUserId)}</span>{" "}
-              {describeActivity(entry, itemId)}
-            </p>
-            <time
-              dateTime={entry.createdAt}
-              title={exact.format(new Date(entry.createdAt))}
-              className="w-fit text-xs text-muted-foreground"
-              suppressHydrationWarning
+      <ol aria-label="Activity" className="grid text-sm">
+        {entries.map((entry) => {
+          const Icon = ACTIVITY_ICONS[entry.action];
+          return (
+            // The line runs from each entry's icon to the next one's.
+            <li
+              key={entry.id}
+              className="relative flex gap-3 pb-5 before:absolute before:top-9 before:bottom-1 before:left-4 before:w-px before:bg-border last:pb-0 last:before:hidden"
             >
-              {timeAgo(entry.createdAt)}
-            </time>
-          </li>
-        ))}
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-subtle-foreground">
+                <Icon className="size-4" aria-hidden />
+              </span>
+              <div className="grid min-w-0 gap-0.5 pt-1.5">
+                <p className="wrap-anywhere">
+                  <span className="font-medium">{actorLabel(entry, currentUserId)}</span>{" "}
+                  {describeActivity(entry, itemId)}
+                </p>
+                <time
+                  dateTime={entry.createdAt}
+                  title={exact.format(new Date(entry.createdAt))}
+                  className="w-fit text-xs text-muted-foreground"
+                  suppressHydrationWarning
+                >
+                  {timeAgo(entry.createdAt)}
+                </time>
+              </div>
+            </li>
+          );
+        })}
       </ol>
       {moreError && (
         <p role="alert" className="text-sm text-destructive">

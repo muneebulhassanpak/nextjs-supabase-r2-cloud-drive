@@ -7,6 +7,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-25
+
+### Added
+
+- An Activity screen in the sidebar: everything that happened to your files, what's shared with you and your account, by day, with filters for what and who. Entries open what they're about.
+- The log now covers deleting forever (the 30-day clean-up included), invites, stars, downloads, sign-ins, and name, picture and password changes. Stars, downloads and account entries are visible only to you, and invites only to the item's owner.
+- History outlives what it's about: after a delete, its owner still sees what happened.
+
+### Changed
+
+- Details open in a window in the middle of the screen (a sheet on phones) instead of a narrow panel on the right. It shows the picture itself, buttons for the common actions, and who has access; the arrow keys step through the items without closing it.
+- Activity is a timeline with an icon for each kind of change.
+- The README covers what the app does, how it works, its security model and how it's tested, with screenshots.
+
 ## [0.9.0] - 2026-11-18
 
 ### Added
@@ -160,7 +174,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Three environments: local (Supabase CLI and RustFS in Docker), staging (`develop`) and production (`main`). Database changes reach staging and production automatically after review.
 - Checks on every pull request: lint, types, unit and integration tests with coverage, database tests (pgTAP), a production build and browser tests on desktop and phone sizes.
 
-[Unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.9.0...HEAD
+[unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.6.2...v0.7.0

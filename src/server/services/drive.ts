@@ -290,3 +290,20 @@ export async function searchDrive(filters: SearchFilters, limit = 50): Promise<D
   if (error) throw error;
   return data.map(toDriveItem);
 }
+
+/** One file the person can see, or null. */
+export async function getFile(id: string): Promise<DriveItem | null> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("items")
+    .select(ITEM_COLUMNS)
+    .eq("id", id)
+    .eq("kind", "file")
+    .eq("status", "ready")
+    .is("trashed_at", null)
+    .maybeSingle()
+    .overrideTypes<ItemRow, { merge: false }>();
+  if (error) throw error;
+  return data && toDriveItem(data);
+}

@@ -4,11 +4,15 @@ import type { Database } from "@/server/db/database.types";
 
 export type ActivityAction = Database["public"]["Enums"]["activity_action"];
 
+/** Where an item can be found now: in the drive, on the viewer's Trash page, or nowhere they can go. */
+export type ItemPlace = "drive" | "trash" | "none";
+
 export interface ActivityEntry {
   id: number;
   action: ActivityAction;
   createdAt: string;
-  item: { id: string; name: string; kind: "folder" | "file" };
+  /** What it happened to; null for the account. Its id is null once it's deleted. */
+  item: { id: string | null; name: string; kind: "folder" | "file"; place: ItemPlace } | null;
   /** Who did it; null name and email when it's someone the viewer can't see (or an account gone). */
   actor: { id: string | null; name: string | null; email: string | null };
   details: {
@@ -19,6 +23,10 @@ export interface ActivityEntry {
     person?: string | null;
     role?: string | null;
     fromRole?: string | null;
+    /** The actor is the person the share was with: they left. */
+    left?: boolean;
+    /** Done by the daily clean-up rather than by someone. */
+    automatic?: boolean;
   };
 }
 
@@ -32,18 +40,23 @@ const someone = "Someone";
 
 /** Who did it, from the viewer's side: "You", their name, or "Someone". */
 export function actorLabel(entry: ActivityEntry, currentUserId: string): string {
+  if (entry.details.automatic) return "Lockerly";
   if (entry.actor.id && entry.actor.id === currentUserId) return "You";
   return entry.actor.name ?? entry.actor.email ?? someone;
 }
 
 /**
  * What happened, after the actor: "renamed “a” to “b”", "shared it with Ann as Viewer". `here` is
- * the item the panel is about: other items are named, so a folder's activity reads well.
+ * the item the panel is about: other items are named, so a folder's activity reads well. On the
+ * Activity screen there's no such item (null), and everything is named.
  */
-export function describeActivity(entry: ActivityEntry, hereId: string): string {
-  const it = entry.item.id === hereId ? "it" : `“${entry.item.name}”`;
-  const what = entry.item.id === hereId ? `this ${entry.item.kind}` : `“${entry.item.name}”`;
-  const { from, to, person, role, fromRole } = entry.details;
+export function describeActivity(entry: ActivityEntry, hereId: string | null): string {
+  const isHere = hereId !== null && entry.item?.id === hereId;
+  const name = `“${entry.item?.name ?? ""}”`;
+  const it = isHere ? "it" : name;
+  const what = isHere ? `this ${entry.item?.kind ?? "item"}` : name;
+  const { details } = entry;
+  const { from, to, person, role, fromRole } = details;
   const who = person ?? "someone";
   const roleName = (value: string | null | undefined) =>
     value === "editor" ? "Editor" : value === "viewer" ? "Viewer" : "a role";
@@ -71,11 +84,35 @@ export function describeActivity(entry: ActivityEntry, hereId: string): string {
     case "share_changed":
       return `changed ${who} from ${roleName(fromRole)} to ${roleName(role)} on ${it}`;
     case "unshared":
-      return `stopped sharing ${it} with ${who}`;
+      return details.left ? `left ${it}` : `stopped sharing ${it} with ${who}`;
     case "link_created":
       return `made a public link to ${it}`;
     case "link_revoked":
       return `turned off the public link to ${it}`;
+    case "deleted":
+      return details.automatic
+        ? `deleted ${it} after 30 days in the trash`
+        : `deleted ${it} forever`;
+    case "invited":
+      return `invited ${who} to ${it} as ${roleName(role)}`;
+    case "invite_changed":
+      return `changed ${who}'s invite to ${it} from ${roleName(fromRole)} to ${roleName(role)}`;
+    case "invite_removed":
+      return `cancelled ${who}'s invite to ${it}`;
+    case "starred":
+      return `starred ${it}`;
+    case "unstarred":
+      return `took the star off ${it}`;
+    case "downloaded":
+      return `downloaded ${it}`;
+    case "signed_in":
+      return "signed in";
+    case "name_changed":
+      return "changed your name";
+    case "picture_changed":
+      return "changed your profile picture";
+    case "password_changed":
+      return "set a new password";
   }
 }
 
