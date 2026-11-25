@@ -10,7 +10,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Added
 
 - An Activity screen in the sidebar: everything that happened to your files, what's shared with you and your account, by day, with filters for what and who. Entries open what they're about.
-- The log now covers deleting forever (the 30-day clean-up included), invites, stars, downloads, sign-ins, and name, picture and password changes. Stars, downloads and account entries are visible only to you.
+- The log now covers deleting forever (the 30-day clean-up included), invites, stars, downloads, sign-ins, and name, picture and password changes. Stars, downloads and account entries are visible only to you, and invites only to the item's owner.
 - History outlives what it's about: after a delete, its owner still sees what happened.
 
 ### Changed

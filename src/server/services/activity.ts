@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { ActivityCursor, ActivityEntry } from "@/lib/drive/activity";
+import type { ActivityCursor, ActivityEntry, ItemPlace } from "@/lib/drive/activity";
 import type { ActivityFilters } from "@/lib/drive/activity-filters";
 import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
@@ -19,6 +19,7 @@ interface ActivityRow {
   item_name: string | null;
   item_kind: "folder" | "file" | null;
   item_trashed?: boolean;
+  item_listed?: boolean;
   actor_id: string | null;
   actor_name: string | null;
   actor_email: string | null;
@@ -85,6 +86,12 @@ function toPage(rows: ActivityRow[]): ActivityPage {
   };
 }
 
+function placeOf(row: ActivityRow): ItemPlace {
+  if (row.item_id === null) return "none";
+  if (!row.item_trashed) return "drive";
+  return row.item_listed ? "trash" : "none";
+}
+
 function toEntry(row: ActivityRow): ActivityEntry {
   const raw = row.details;
   return {
@@ -98,7 +105,7 @@ function toEntry(row: ActivityRow): ActivityEntry {
             id: row.item_id,
             name: row.item_name,
             kind: row.item_kind,
-            trashed: row.item_trashed ?? false,
+            place: placeOf(row),
           },
     actor: { id: row.actor_id, name: row.actor_name, email: row.actor_email },
     details: toDetails(row, raw),
@@ -126,6 +133,8 @@ function toDetails(row: ActivityRow, raw: Record<string, unknown>): ActivityEntr
       };
     case "share_changed":
       return { person, role: text(raw.to), fromRole: text(raw.from) };
+    case "invite_changed":
+      return { person: text(raw.email), role: text(raw.to), fromRole: text(raw.from) };
     case "invited":
     case "invite_removed":
       return { person: text(raw.email), role: text(raw.role) };

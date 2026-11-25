@@ -2,6 +2,7 @@
 -- them (the next migration does).
 alter type public.activity_action add value 'deleted';
 alter type public.activity_action add value 'invited';
+alter type public.activity_action add value 'invite_changed';
 alter type public.activity_action add value 'invite_removed';
 alter type public.activity_action add value 'starred';
 alter type public.activity_action add value 'unstarred';

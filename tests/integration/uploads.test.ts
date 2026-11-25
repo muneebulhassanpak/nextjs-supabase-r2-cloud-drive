@@ -4,13 +4,15 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { env } from "@/env";
 import { toErrorBody } from "@/server/errors";
 import { cleanupStorage } from "@/server/jobs/cleanup-storage";
+import { getMyActivity } from "@/server/services/activity";
 import {
   getAvatarUrl,
   removeAvatar,
   saveAvatar,
   startAvatarUpload,
 } from "@/server/services/avatars";
-import { getFileUrl, getThumbnailUrl, recordRecent } from "@/server/services/files";
+import { getFile } from "@/server/services/drive";
+import { getFileUrl, getThumbnailUrl, logDownload, recordRecent } from "@/server/services/files";
 import { cancelUpload, completeUpload, startUpload } from "@/server/services/uploads";
 import { storage } from "@/server/storage/client";
 
@@ -23,6 +25,7 @@ import { adminClient, newUser, type Client } from "../support/local-stack";
 let actingAs: { client: Client; id: string; email: string };
 vi.mock("@/server/auth/session", () => ({
   requireApiUser: () => Promise.resolve({ id: actingAs.id, email: actingAs.email }),
+  requireUser: () => Promise.resolve({ id: actingAs.id, email: actingAs.email }),
 }));
 vi.mock("@/server/db/server", () => ({ createClient: () => Promise.resolve(actingAs.client) }));
 vi.mock("@/server/db/admin", async () => ({
@@ -320,6 +323,20 @@ describe("downloading (T3)", () => {
     expect(await errorOf(getFileUrl(fileId, "attachment"))).toMatchObject({ status: 404 });
     as(stranger);
     expect(await errorOf(getFileUrl(sharedFileId, "attachment"))).toMatchObject({ status: 404 });
+  });
+
+  it("finds one file by id and logs its download, for those who can see it", async () => {
+    as(viewer);
+    expect((await getFile(sharedFileId))?.name).toBe("plan.txt");
+    await logDownload(sharedFileId);
+    expect((await getMyActivity({ type: "files", who: "me" })).entries[0]).toMatchObject({
+      action: "downloaded",
+      item: { id: sharedFileId, name: "plan.txt", place: "drive" },
+    });
+    as(stranger);
+    expect(await getFile(sharedFileId)).toBeNull();
+    // Refused, but quietly: a download never fails because of the log.
+    await expect(logDownload(sharedFileId)).resolves.toBeUndefined();
   });
 
   it("has no links for files in the trash or still uploading", async () => {

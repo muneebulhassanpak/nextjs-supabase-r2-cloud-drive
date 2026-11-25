@@ -39,6 +39,7 @@ export const ACTIVITY_ICONS: Record<ActivityAction, LucideIcon> = {
   link_revoked: Link2Off,
   deleted: X,
   invited: MailPlus,
+  invite_changed: UserCog,
   invite_removed: MailX,
   starred: Star,
   unstarred: StarOff,
