@@ -83,6 +83,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useUploads } from "@/components/uploads/upload-provider";
+import { useShortcut } from "@/components/use-shortcut";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ITEMS_PER_REQUEST } from "@/lib/drive/names";
 import { groupByOpened } from "@/lib/drive/recent";
@@ -265,6 +266,13 @@ export function FolderBrowser(props: FolderBrowserProps) {
   const [previewId, setPreviewId] = useState<string | null>(props.initialPreviewId ?? null);
   const [sheetItem, setSheetItem] = useState<DriveItem | null>(null);
   const uploads = useUploads();
+  useShortcut(
+    "n",
+    () => {
+      setDialog({ kind: "new" });
+    },
+    canEdit,
+  );
   const detailsButton = useRef<HTMLButtonElement>(null);
   // Bumped when access changes, so the details window shows it.
   const [accessVersion, setAccessVersion] = useState(0);

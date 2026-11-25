@@ -329,14 +329,15 @@ function Fact({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-        <Icon className="size-4" aria-hidden />
-      </span>
-      <div className="min-w-0">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="truncate font-medium">{children}</dd>
-      </div>
+    // Only terms and descriptions may sit in a list like this, so the icon is part of the term.
+    <div className="relative flex min-h-9 min-w-0 flex-col justify-center pl-12">
+      <dt className="text-xs text-muted-foreground">
+        <span className="absolute inset-y-0 left-0 my-auto grid size-9 place-items-center rounded-xl bg-muted">
+          <Icon className="size-4" aria-hidden />
+        </span>
+        {label}
+      </dt>
+      <dd className="truncate font-medium">{children}</dd>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
 import { formError, toErrorBody, type ActionResult } from "@/server/errors";
 import { getRequestId } from "@/server/request-id";
+import { getMyProfile } from "@/server/services/profile";
 
 export type ProfileFormState = ActionResult<{ fullName: string }> | undefined;
 
@@ -50,6 +51,7 @@ export async function signOut(): Promise<void> {
 /** Signs out every device: all sessions of this account end, including this one. */
 export async function signOutEverywhere(): Promise<ActionResult<never>> {
   await requireUser();
+  if ((await getMyProfile()).isDemo) return formError("Not available in the demo.");
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut({ scope: "global" });
   if (error) return formError(authErrorMessage(error, await getRequestId()));
