@@ -31,11 +31,13 @@ const subscribeNever = () => () => undefined;
 
 /** Where an entry's item can be opened, if it still can. */
 function itemHref({ item }: ActivityEntry): string | null {
-  if (!item?.id) return null;
-  if (item.trashed) return "/drive/trash";
+  if (!item?.id || item.place === "none") return null;
+  if (item.place === "trash") return "/drive/trash";
   if (item.kind === "folder") return `/drive/folders/${item.id}`;
   // Search opens a file wherever it is, in a folder the person may not see.
-  return `${searchHref({ q: item.name })}&open=${item.id}`;
+  // (By whole characters, well within what a search may be.)
+  const query = Array.from(item.name).slice(0, 50).join("");
+  return `${searchHref({ q: query })}&open=${item.id}`;
 }
 
 /** Everything that happened, by day, newest first, with filters in the URL. */

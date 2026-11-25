@@ -4,12 +4,15 @@ import type { Database } from "@/server/db/database.types";
 
 export type ActivityAction = Database["public"]["Enums"]["activity_action"];
 
+/** Where an item can be found now: in the drive, on the viewer's Trash page, or nowhere they can go. */
+export type ItemPlace = "drive" | "trash" | "none";
+
 export interface ActivityEntry {
   id: number;
   action: ActivityAction;
   createdAt: string;
   /** What it happened to; null for the account. Its id is null once it's deleted. */
-  item: { id: string | null; name: string; kind: "folder" | "file"; trashed: boolean } | null;
+  item: { id: string | null; name: string; kind: "folder" | "file"; place: ItemPlace } | null;
   /** Who did it; null name and email when it's someone the viewer can't see (or an account gone). */
   actor: { id: string | null; name: string | null; email: string | null };
   details: {
@@ -92,6 +95,8 @@ export function describeActivity(entry: ActivityEntry, hereId: string | null): s
         : `deleted ${it} forever`;
     case "invited":
       return `invited ${who} to ${it} as ${roleName(role)}`;
+    case "invite_changed":
+      return `changed ${who}'s invite to ${it} from ${roleName(fromRole)} to ${roleName(role)}`;
     case "invite_removed":
       return `cancelled ${who}'s invite to ${it}`;
     case "starred":

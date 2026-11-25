@@ -6,7 +6,7 @@ import { activityHref, groupByDay, parseActivityFilters } from "@/lib/drive/acti
 const entry = (
   action: ActivityEntry["action"],
   details: ActivityEntry["details"] = {},
-  item: ActivityEntry["item"] = { id: "i", name: "a.txt", kind: "file", trashed: false },
+  item: ActivityEntry["item"] = { id: "i", name: "a.txt", kind: "file", place: "drive" },
 ): ActivityEntry => ({
   id: 1,
   action,
@@ -25,6 +25,10 @@ describe("describeActivity on the Activity screen", () => {
       entry("invited", { person: "x@y.dev", role: "viewer" }),
       "invited x@y.dev to “a.txt” as Viewer",
     ],
+    [
+      entry("invite_changed", { person: "x@y.dev", fromRole: "viewer", role: "editor" }),
+      "changed x@y.dev's invite to “a.txt” from Viewer to Editor",
+    ],
     [entry("invite_removed", { person: "x@y.dev" }), "cancelled x@y.dev's invite to “a.txt”"],
     [entry("unshared", { person: "Ann" }), "stopped sharing “a.txt” with Ann"],
     [entry("unshared", { person: "Ann", left: true }), "left “a.txt”"],
@@ -40,7 +44,7 @@ describe("describeActivity on the Activity screen", () => {
   });
 
   it("doesn't mistake a deleted item for the one a panel is about", () => {
-    const gone = entry("deleted", {}, { id: null, name: "b", kind: "folder", trashed: false });
+    const gone = entry("deleted", {}, { id: null, name: "b", kind: "folder", place: "drive" });
     expect(describeActivity(gone, null)).toBe("deleted “b” forever");
   });
 

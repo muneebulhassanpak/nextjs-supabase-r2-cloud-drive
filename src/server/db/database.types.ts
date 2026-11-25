@@ -265,7 +265,7 @@ isOneToOne: false
                            },
 "my_activity":
 { Args: { "p_before_at"?: string,"p_before_id"?: number,"p_limit"?: number,"p_type"?: string,"p_who"?: string }; Returns: {
-              "action": Database["public"]['Enums']["activity_action"],"actor_email": string,"actor_id": string,"actor_name": string,"created_at": string,"details": Json,"from_name": string,"id": number,"item_id": string,"item_kind": Database["public"]['Enums']["item_kind"],"item_name": string,"item_trashed": boolean,"person_email": string,"person_name": string,"to_name": string
+              "action": Database["public"]['Enums']["activity_action"],"actor_email": string,"actor_id": string,"actor_name": string,"created_at": string,"details": Json,"from_name": string,"id": number,"item_id": string,"item_kind": Database["public"]['Enums']["item_kind"],"item_listed": boolean,"item_name": string,"item_trashed": boolean,"person_email": string,"person_name": string,"to_name": string
             }[]
                            },
 "ping":
@@ -372,7 +372,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "access_role": "viewer"|"editor"|"owner","activity_action": "created"|"uploaded"|"renamed"|"moved"|"trashed"|"restored"|"shared"|"share_changed"|"unshared"|"link_created"|"link_revoked"|"deleted"|"invited"|"invite_removed"|"starred"|"unstarred"|"downloaded"|"signed_in"|"name_changed"|"picture_changed"|"password_changed","drive_view": "grid"|"list","item_category": "image"|"video"|"audio"|"pdf"|"document"|"spreadsheet"|"presentation"|"text"|"archive"|"other","item_kind": "folder"|"file","item_status": "pending"|"ready","share_role": "viewer"|"editor"
+            "access_role": "viewer"|"editor"|"owner","activity_action": "created"|"uploaded"|"renamed"|"moved"|"trashed"|"restored"|"shared"|"share_changed"|"unshared"|"link_created"|"link_revoked"|"deleted"|"invited"|"invite_changed"|"invite_removed"|"starred"|"unstarred"|"downloaded"|"signed_in"|"name_changed"|"picture_changed"|"password_changed","drive_view": "grid"|"list","item_category": "image"|"video"|"audio"|"pdf"|"document"|"spreadsheet"|"presentation"|"text"|"archive"|"other","item_kind": "folder"|"file","item_status": "pending"|"ready","share_role": "viewer"|"editor"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -488,7 +488,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "access_role": ["viewer", "editor", "owner"],"activity_action": ["created", "uploaded", "renamed", "moved", "trashed", "restored", "shared", "share_changed", "unshared", "link_created", "link_revoked", "deleted", "invited", "invite_removed", "starred", "unstarred", "downloaded", "signed_in", "name_changed", "picture_changed", "password_changed"],"drive_view": ["grid", "list"],"item_category": ["image", "video", "audio", "pdf", "document", "spreadsheet", "presentation", "text", "archive", "other"],"item_kind": ["folder", "file"],"item_status": ["pending", "ready"],"share_role": ["viewer", "editor"]
+            "access_role": ["viewer", "editor", "owner"],"activity_action": ["created", "uploaded", "renamed", "moved", "trashed", "restored", "shared", "share_changed", "unshared", "link_created", "link_revoked", "deleted", "invited", "invite_changed", "invite_removed", "starred", "unstarred", "downloaded", "signed_in", "name_changed", "picture_changed", "password_changed"],"drive_view": ["grid", "list"],"item_category": ["image", "video", "audio", "pdf", "document", "spreadsheet", "presentation", "text", "archive", "other"],"item_kind": ["folder", "file"],"item_status": ["pending", "ready"],"share_role": ["viewer", "editor"]
           }
         }
 } as const

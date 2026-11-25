@@ -2,7 +2,7 @@
 begin;
 \ir helpers/setup.psql
 \ir helpers/fixture.psql
-select plan(41);
+select plan(50);
 
 -- What someone's screen shows, as item:action (or the kept name, once the item is deleted).
 create function tests.feed(p_type text default null, p_who text default 'any')
@@ -49,6 +49,11 @@ select tests.authenticate_as('owner');
 select is(tests.feed(), '{}'::text[], 'the owner of the file does not see them');
 select is_empty(format('select * from public.item_activity(%L)', tests.id('f1')), 'nor on the item');
 select is_empty('select * from public.activity', 'nor straight from the table');
+select throws_ok(format('select public.log_download(%L)', tests.id('F')), 'P0002', null, 'folders are not downloaded');
+select throws_ok(format('select public.log_download(%L)', tests.id('p1')), 'P0002', null, 'nor unfinished uploads');
+select throws_ok(format('select public.log_download(%L)', tests.id('t1')), 'P0002', null, 'nor things in the trash');
+insert into public.stars (item_id) values (tests.id('p1'));
+select is(tests.feed(), '{}'::text[], 'nothing is logged about an unfinished upload');
 select tests.authenticate_as('stranger');
 select throws_ok(format('select public.log_download(%L)', tests.id('f1')), 'P0002', 'Item not found',
   'no logging on things you cannot see');
@@ -60,8 +65,16 @@ select tests.authenticate_as('owner');
 select public.share_item(tests.id('R'), 'new@test.dev', 'editor');
 select is((select details from public.my_activity('sharing')), '{"email": "new@test.dev", "role": "editor"}'::jsonb,
   'an invite is logged with its address and role');
+update public.share_invites set role = 'viewer' where item_id = tests.id('R');
+select is(
+  (select details from public.my_activity('sharing') where action = 'invite_changed'),
+  '{"email": "new@test.dev", "from": "editor", "to": "viewer"}'::jsonb, 'changing its role is logged');
+select public.share_item(tests.id('F'), 'secret@test.dev', 'viewer');
+delete from public.share_invites where email = 'secret@test.dev';
 select tests.authenticate_as('editor');
-select is(tests.feed(), '{}'::text[], 'others don''t see invites to things they can''t see');
+select is(tests.feed(), '{}'::text[], 'an editor doesn''t see who was invited, even to what they can see');
+select is_empty(format('select * from public.item_activity(%L)', tests.id('F')), 'nor on the item');
+select is_empty('select * from public.activity', 'nor straight from the table');
 select tests.authenticate_as('owner');
 delete from public.share_invites where item_id = tests.id('R');
 select is((tests.feed())[1], 'private.txt:invite_removed', 'so is cancelling it');
@@ -95,6 +108,7 @@ select is(tests.feed(), '{notes.md:moved}'::text[], 'the editor''s view of it en
 select is(tests.rows('select action::text from public.activity'), '{moved}', 'in the table as well');
 select tests.clear_authentication();
 select is((select item_id from public.activity where action = 'renamed'), null, 'nothing dangles');
+select is_empty($$select 1 from public.activity where action = 'starred'$$, 'other people''s stars go with the item');
 
 -- The daily purge is logged as automatic.
 select tests.forget();
@@ -144,6 +158,17 @@ select is(
 select throws_ok($$select * from public.my_activity('movies')$$, 'LK422', 'Unknown type', 'unknown types');
 select throws_ok($$select * from public.my_activity(null, 'them')$$, 'LK422', null, 'unknown who');
 select throws_ok($$select * from public.my_activity(p_before_at => now())$$, 'LK422', null, 'half a cursor');
+
+-- Someone's file goes when the account owning the folder it's in does: they're told, and not that it
+-- was the purge.
+select tests.clear_authentication();
+select tests.forget();
+select tests.new_folder('VF', 'stranger', null, 'Shared place');
+select tests.new_file('VE', 'editor', 'VF', 'report.pdf');
+delete from auth.users where id = tests.id('stranger');
+select is(
+  (select details from public.activity where action = 'deleted' and owner_id = tests.id('editor')), '{}'::jsonb,
+  'a file lost with someone''s account is logged for its owner');
 
 -- Deleting an account takes its log with it, and doesn't trip over it.
 select tests.clear_authentication();

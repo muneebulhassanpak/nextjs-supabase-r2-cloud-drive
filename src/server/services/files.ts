@@ -45,13 +45,11 @@ export async function getFileUrl(
   id: string,
   disposition: Disposition,
 ): Promise<{ url: string; expiresIn: number }> {
-  const signed = await signFileUrl(await readableFile(id), disposition);
-  if (disposition === "attachment") await logDownload(id);
-  return signed;
+  return signFileUrl(await readableFile(id), disposition);
 }
 
 /** Adds a download to the person's activity. A download that can't be logged still goes ahead. */
-async function logDownload(id: string): Promise<void> {
+export async function logDownload(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("log_download", { p_item_id: id });
   if (error) logger.warn({ code: error.code }, "download not logged");

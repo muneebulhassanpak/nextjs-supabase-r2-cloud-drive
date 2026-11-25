@@ -9,7 +9,7 @@ import { FolderBrowser } from "@/components/drive/folder-browser";
 import { SearchFilters } from "@/components/drive/search-filters";
 import { modifiedRange, parseSearchParams } from "@/lib/drive/search";
 import { parseSort } from "@/lib/drive/sort";
-import { searchDrive } from "@/server/services/drive";
+import { getFile, searchDrive } from "@/server/services/drive";
 import { getMyProfile } from "@/server/services/profile";
 
 import type { Metadata } from "next";
@@ -37,7 +37,7 @@ async function Results({ searchParams }: Props) {
   const range = modifiedRange(params);
   const open =
     typeof raw.open === "string" && z.uuid().safeParse(raw.open).success ? raw.open : undefined;
-  const [items, profile] = await Promise.all([
+  const [results, profile] = await Promise.all([
     searchDrive({
       query: params.q,
       type: params.type,
@@ -47,6 +47,9 @@ async function Results({ searchParams }: Props) {
     }),
     getMyProfile(),
   ]);
+  // A file asked for by id is shown even when it's not among the best matches.
+  const missing = open && !results.some((item) => item.id === open) ? await getFile(open) : null;
+  const items = missing ? [missing, ...results] : results;
   return (
     <FolderBrowser
       // A new search starts fresh: selection, preview and all.

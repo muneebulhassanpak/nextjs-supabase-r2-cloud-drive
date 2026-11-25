@@ -107,9 +107,9 @@ select is(
   array[
     'private.can_see_profile(uuid)',
     'private.is_item_owner(uuid)',
-    'private.is_personal_activity(activity_action)',
     'private.item_access(uuid)',
-    'private.item_role(uuid,uuid,uuid[])'
+    'private.item_role(uuid,uuid,uuid[])',
+    'private.may_read_activity(activity_action,uuid,uuid,uuid)'
   ],
   'signed-in users can execute only the helpers that policies use'
 );

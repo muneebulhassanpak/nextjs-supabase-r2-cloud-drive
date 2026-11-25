@@ -67,7 +67,7 @@ A share on a folder covers everything inside it, and the strongest role wins.
 
 How that's tested:
 
-- **483 database tests** ([`supabase/tests`](supabase/tests)) act as each kind of person and check what's allowed and what's refused. A table without RLS fails the suite.
+- **492 database tests** ([`supabase/tests`](supabase/tests)) act as each kind of person and check what's allowed and what's refused. A table without RLS fails the suite.
 - **Mutation checks** ([script](scripts/check-policy-mutations.sh)) remove each policy, then open it to everyone, and confirm the tests notice both times.
 - **Integration tests** call the API directly with a real session, as an attacker would, skipping the app.
 
@@ -107,8 +107,8 @@ pnpm dev        # http://localhost:3000
 
 | What                                    | Count                          | Command                       |
 | --------------------------------------- | ------------------------------ | ----------------------------- |
-| Unit and integration (Vitest)           | 325, 92% of statements covered | `pnpm test:coverage`          |
-| Database (pgTAP)                        | 483                            | `pnpm db:test`                |
+| Unit and integration (Vitest)           | 327, 92% of statements covered | `pnpm test:coverage`          |
+| Database (pgTAP)                        | 492                            | `pnpm db:test`                |
 | Browser (Playwright, desktop and phone) | 69                             | `pnpm build && pnpm test:e2e` |
 
 Run the database tests on a fresh local database (`pnpm db:reset`, which clears local data).

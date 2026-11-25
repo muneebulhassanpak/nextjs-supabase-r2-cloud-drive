@@ -17,8 +17,8 @@ async function Feed({ searchParams }: Props) {
   const [user, page] = await Promise.all([requireUser(), getMyActivity(filters)]);
   return (
     <ActivityFeed
-      // New filters, or something newer at the top, start from the first page.
-      key={`${JSON.stringify(filters)}:${String(page.entries[0]?.id ?? "")}`}
+      // New filters, or anything different on the first page, start again from it.
+      key={JSON.stringify([filters, page.entries])}
       filters={filters}
       initial={page}
       currentUserId={user.id}
