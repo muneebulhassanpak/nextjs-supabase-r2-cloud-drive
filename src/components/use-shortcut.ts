@@ -17,7 +17,7 @@ export function useShortcut(key: string, action: () => void, enabled = true): vo
   useEffect(() => {
     if (!enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== key || !isFree(event)) return;
+      if (event.key.toLowerCase() !== key || !isFree(event)) return;
       event.preventDefault();
       run();
     };

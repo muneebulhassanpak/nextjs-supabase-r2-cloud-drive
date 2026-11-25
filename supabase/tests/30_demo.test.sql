@@ -1,7 +1,7 @@
 -- The public demo: it can't be taken over, can't reach anyone outside it, and can be put back.
 begin;
 \ir helpers/setup.psql
-select plan(30);
+select plan(32);
 
 select tests.create_user('demo');
 select tests.create_user('sam');
@@ -58,6 +58,10 @@ select public.create_share_link(tests.id('D'), decode(repeat('ab', 32), 'hex'), 
 select ok(
   (select expires_at <= now() + interval '1 day' from public.share_links where item_id = tests.id('D')),
   'a public link lasts a day at most');
+update public.share_links set expires_at = null where item_id = tests.id('D');
+select ok(
+  (select expires_at <= now() + interval '1 day' from public.share_links where item_id = tests.id('D')),
+  'even if it''s changed later');
 select tests.authenticate_as('other');
 select throws_ok(
   format('select public.share_item(%L, %L, ''viewer'')', tests.id('O'), current_setting('tests.demo')),
@@ -67,9 +71,9 @@ select lives_ok(
 select is((select expires_at from public.share_links where item_id = tests.id('O')), null, 'keep the expiry they chose');
 
 -- The reset.
-select throws_ok($$select public.reset_demo('[]', '[]', '[]', '[]', '[]')$$, '42501', null, 'people can''t run it');
+select throws_ok($$select public.reset_demo('[]', '[]', '[]', '[]', '[]', '[]')$$, '42501', null, 'people can''t run it');
 select tests.clear_authentication();
-select throws_ok($$select public.reset_demo('[]', '[]', '[]', '[]', '[]')$$, 'LK422', null, 'it needs accounts');
+select throws_ok($$select public.reset_demo('[]', '[]', '[]', '[]', '[]', '[]')$$, 'LK422', null, 'it needs accounts');
 select tests.new_file('junk', 'demo', 'D', 'junk.bin');
 create function tests.reset() returns void language sql as $$
   select public.reset_demo(
@@ -87,6 +91,7 @@ create function tests.reset() returns void language sql as $$
         'trashed_at', '2026-01-03')),
     jsonb_build_array(jsonb_build_object('item_id', '00000000-0000-4000-8000-000000000001', 'user_id', tests.id('sam'),
       'role', 'editor', 'created_at', '2026-01-04')),
+    jsonb_build_array(jsonb_build_object('item_id', '00000000-0000-4000-8000-000000000001', 'token_hash', repeat('ef', 32))),
     jsonb_build_array(jsonb_build_object('user_id', tests.id('demo'), 'item_id', '00000000-0000-4000-8000-000000000001',
       'created_at', '2026-01-05')),
     jsonb_build_array(jsonb_build_object('item_id', '00000000-0000-4000-8000-000000000002', 'actor_id', tests.id('sam'),
@@ -98,6 +103,7 @@ select results_eq(
   format('select name, trashed_at is not null, created_at::date from public.items where owner_id = %L order by created_at, name', tests.id('demo')),
   $$values ('Projects', false, '2026-01-01'::date), ('a.txt', false, '2026-01-02'), ('old.txt', true, '2026-01-02')$$,
   'everything else is gone and the seed is there, on its dates');
+select is((select count(*)::int from public.share_links where created_by = tests.id('demo')), 1, 'with its link');
 select is((select storage_used from public.profiles where id = tests.id('demo')), 12::bigint, 'the space matches');
 select results_eq(
   format('select action::text, details ->> ''to'' from public.activity where owner_id = any (array[%L, %L]::uuid[])',

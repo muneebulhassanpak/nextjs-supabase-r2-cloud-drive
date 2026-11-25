@@ -13,7 +13,7 @@ import { useShortcut } from "@/components/use-shortcut";
 
 const SHORTCUTS = [
   { keys: ["/"], does: "Search" },
-  { keys: ["N"], does: "New folder" },
+  { keys: ["N"], does: "New folder, where you can add one" },
   { keys: ["Enter"], does: "Open what's selected" },
   { keys: ["F2"], does: "Rename" },
   { keys: ["Delete"], does: "Move to the trash" },
@@ -32,9 +32,7 @@ export function ShortcutsHelp() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Keyboard shortcuts</DialogTitle>
-          <DialogDescription>
-            They work anywhere in your drive, except while typing.
-          </DialogDescription>
+          <DialogDescription>They work while you aren&apos;t typing.</DialogDescription>
         </DialogHeader>
         <dl className="grid gap-1 text-sm">
           {SHORTCUTS.map(({ keys, does }) => (

@@ -7,12 +7,20 @@ const PORT = 3100;
 // The daily jobs need these; the demo's tests run one first (e2e/fill-demo.ts). The local key is
 // read once, and only from the local stack (workers load this file too, and inherit it).
 export const CRON_SECRET = "local-cron-secret-for-browser-tests";
-process.env.E2E_SECRET_KEY ??= /^SECRET_KEY="?([^"\n]+)"?$/m.exec(
-  execFileSync("pnpm", ["exec", "supabase", "status", "-o", "env"], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
-  }),
-)?.[1];
+process.env.E2E_SECRET_KEY ??= localSecretKey();
+
+function localSecretKey(): string {
+  try {
+    const status = execFileSync("pnpm", ["exec", "supabase", "status", "-o", "env"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return /^SECRET_KEY="?([^"\n]+)"?$/m.exec(status)?.[1] ?? "";
+  } catch {
+    // The stack isn't running: listing the tests still works; running them says what's wrong.
+    return "";
+  }
+}
 
 /**
  * End-to-end tests run against a production build (`pnpm build` first) and the local stack
@@ -41,7 +49,7 @@ export default defineConfig({
     env: {
       LOG_LEVEL: "warn",
       CRON_SECRET,
-      SUPABASE_SECRET_KEY: process.env.E2E_SECRET_KEY ?? "",
+      SUPABASE_SECRET_KEY: process.env.E2E_SECRET_KEY,
     },
   },
 });

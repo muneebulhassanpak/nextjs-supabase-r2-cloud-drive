@@ -38,6 +38,23 @@ describe("the demo", () => {
   };
 
   beforeAll(async () => {
+    // An account made by hand, with some other password, is taken over.
+    const admin = adminClient();
+    const found = await admin.from("profiles").select("id").eq("email", DEMO_EMAIL).maybeSingle();
+    if (found.data) {
+      await admin.from("profiles").update({ is_demo: false }).eq("id", found.data.id);
+      const { error } = await admin.auth.admin.updateUserById(found.data.id, {
+        password: "made-by-hand-123",
+      });
+      if (error) throw error;
+    } else {
+      const { error } = await admin.auth.admin.createUser({
+        email: DEMO_EMAIL,
+        password: "made-by-hand-123",
+        email_confirm: true,
+      });
+      if (error) throw error;
+    }
     await resetDemo();
     visitor = anonClient();
     const { data, error } = await visitor.auth.signInWithPassword({
@@ -56,6 +73,11 @@ describe("the demo", () => {
       "Projects",
       "Welcome to Lockerly.md",
     ]);
+    const { data: links } = await visitor
+      .from("share_links")
+      .select("item_id")
+      .eq("created_by", id);
+    expect(links).toHaveLength(1);
     const { data: files } = await visitor
       .from("items")
       .select("name, size, object_key")
