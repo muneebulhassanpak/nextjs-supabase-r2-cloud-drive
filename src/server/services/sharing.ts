@@ -203,11 +203,12 @@ export async function shareWithPeople(
   if (added.length > 0) {
     const [item, me] = await Promise.all([
       supabase.from("items").select("name, kind").eq("id", itemId).single(),
-      supabase.from("profiles").select("full_name, email").eq("id", user.id).single(),
+      supabase.from("profiles").select("full_name, email, is_demo").eq("id", user.id).single(),
     ]);
     if (item.error || me.error) {
       logger.warn({ err: item.error ?? me.error, itemId }, "share emails not sent");
-    } else {
+    } else if (!me.data.is_demo) {
+      // (The demo only shares with its other person, who has no mailbox.)
       const sharer = me.data.full_name ?? me.data.email;
       const results = await Promise.allSettled(
         added.map((to) => sendEmail(shareEmail({ to, sharer, item: item.data, role, origin }))),

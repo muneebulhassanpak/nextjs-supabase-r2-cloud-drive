@@ -8,6 +8,10 @@
       "schedule": "17 4 * * *"
     },
     {
+      "path": "/api/cron/reset-demo",
+      "schedule": "17 3 * * *"
+    },
+    {
       "path": "/api/cron/purge-trash",
       "schedule": "47 3 * * *"
     }
