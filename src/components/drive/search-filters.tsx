@@ -1,17 +1,10 @@
 "use client";
 
-import { Check, ChevronDown, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type SyntheticEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   MODIFIED_FILTERS,
@@ -20,7 +13,8 @@ import {
   TYPE_FILTERS,
   type SearchParams,
 } from "@/lib/drive/search";
-import { cn } from "@/lib/utils";
+
+import { FilterMenu } from "./filter-menu";
 
 /** The filters above search results. Each change is a new URL, so Back undoes it. */
 export function SearchFilters({ params }: { params: SearchParams }) {
@@ -46,7 +40,7 @@ export function SearchFilters({ params }: { params: SearchParams }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
-        <Filter
+        <FilterMenu
           label="Type"
           value={params.type ?? "any"}
           options={[{ value: "any", label: "Any type" }, ...TYPE_FILTERS]}
@@ -55,7 +49,7 @@ export function SearchFilters({ params }: { params: SearchParams }) {
             apply({ type: value === "any" ? null : (value as SearchParams["type"]) });
           }}
         />
-        <Filter
+        <FilterMenu
           label="Owner"
           value={params.owner}
           options={OWNER_FILTERS}
@@ -64,7 +58,7 @@ export function SearchFilters({ params }: { params: SearchParams }) {
             apply({ owner: value as SearchParams["owner"] });
           }}
         />
-        <Filter
+        <FilterMenu
           label="Modified"
           value={params.modified}
           options={MODIFIED_FILTERS}
@@ -122,45 +116,5 @@ export function SearchFilters({ params }: { params: SearchParams }) {
         </form>
       )}
     </div>
-  );
-}
-
-function Filter({
-  label,
-  value,
-  options,
-  active,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: readonly { value: string; label: string }[];
-  active: boolean;
-  onChange: (value: string) => void;
-}) {
-  const current = options.find((option) => option.value === value);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn("rounded-full", active && "border-primary/50 bg-primary/10")}
-        >
-          {active && <Check />}
-          {active ? current?.label : label}
-          <ChevronDown />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
-          {options.map((option) => (
-            <DropdownMenuRadioItem key={option.value} value={option.value}>
-              {option.label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

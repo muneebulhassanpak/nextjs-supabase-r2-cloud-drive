@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { NotFoundError } from "@/server/errors";
-import { getActivity } from "@/server/services/activity";
+import { getActivity, getMyActivity } from "@/server/services/activity";
 import { searchDrive, searchFolders, type SearchFilters } from "@/server/services/drive";
 import { shareWithPeople } from "@/server/services/sharing";
 
@@ -138,5 +138,35 @@ describe("search and activity", () => {
     expect(entries[0]?.actor.id).toBe(owner.id);
     as(stranger);
     await expect(getActivity(quarterly)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("keeps everything on the Activity screen, deleted items included, page by page", async () => {
+    const person = await newUser("feed-owner");
+    as(person);
+    const id = await folder("Diary");
+    for (let n = 1; n <= 31; n += 1) await rename(id, `Diary ${String(n)}`);
+    const all = { type: "files", who: "me" } as const;
+    const first = await getMyActivity(all);
+    expect(first.entries).toHaveLength(30);
+    const rest = await getMyActivity(all, first.next);
+    expect(rest.entries.map((entry) => entry.action)).toEqual(["renamed", "created"]);
+    expect(rest.next).toBeNull();
+
+    await person.client.rpc("trash_item", { p_item_id: id });
+    await person.client.rpc("delete_forever", { p_item_id: id });
+    const [deleted] = (await getMyActivity({ type: "trash", who: "any" })).entries;
+    expect(deleted).toMatchObject({
+      action: "deleted",
+      item: { id: null, name: "Diary 31", kind: "folder" },
+      actor: { id: person.id },
+      details: { automatic: false },
+    });
+    expect((await getMyActivity({ type: "account", who: "any" })).entries[0]).toMatchObject({
+      action: "signed_in",
+      item: null,
+    });
+    as(stranger);
+    const seen = (await getMyActivity({ type: null, who: "any" })).entries;
+    expect(seen.some((entry) => entry.item?.name.startsWith("Diary"))).toBe(false);
   });
 });
