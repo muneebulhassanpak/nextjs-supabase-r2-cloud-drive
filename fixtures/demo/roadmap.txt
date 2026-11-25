@@ -1,0 +1,5 @@
+Roadmap
+
+Q1  Research, copy, first designs
+Q2  Build, test with ten customers
+Q3  Launch, measure, improve

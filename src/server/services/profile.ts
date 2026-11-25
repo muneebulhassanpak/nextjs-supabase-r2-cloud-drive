@@ -13,6 +13,7 @@ export interface Profile {
   avatarKey: string | null;
   storageUsed: number;
   storageQuota: number;
+  isDemo: boolean;
 }
 
 /** The signed-in person's profile, read as them (through row-level security). Once per request. */
@@ -21,7 +22,7 @@ export const getMyProfile = cache(async (): Promise<Profile> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("email, full_name, drive_view, avatar_key, storage_used, storage_quota")
+    .select("email, full_name, drive_view, avatar_key, storage_used, storage_quota, is_demo")
     .eq("id", user.id)
     .single();
   if (error) throw error;
@@ -33,5 +34,6 @@ export const getMyProfile = cache(async (): Promise<Profile> => {
     avatarKey: data.avatar_key,
     storageUsed: data.storage_used,
     storageQuota: data.storage_quota,
+    isDemo: data.is_demo,
   };
 });

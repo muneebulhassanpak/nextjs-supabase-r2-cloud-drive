@@ -17,6 +17,7 @@ const LOCAL = {
   storageBucket: "lockerly-local",
   storageAccessKeyId: "lockerly-local",
   storageSecretAccessKey: "lockerly-local-secret",
+  demoPassword: "local-demo-password-1",
 } as const;
 
 /** Required on Vercel; falls back to the local stack everywhere else. */
@@ -49,6 +50,10 @@ export const env = createEnv({
     // Set by Vercel on every deployment; shown by /api/health so you can tell which build is live.
     VERCEL_GIT_COMMIT_SHA: z.string().optional(),
 
+    // The public demo account's password (see src/server/jobs/reset-demo.ts). The account is locked
+    // and shared, but the password isn't published: people get in through "Try the demo".
+    DEMO_PASSWORD: required(z.string().min(12), LOCAL.demoPassword),
+
     // Where people reach the app, for links in emails (never taken from request headers, which
     // the sender controls). Required on Vercel.
     APP_URL: required(z.url(), "http://localhost:3000"),
@@ -72,6 +77,7 @@ export const env = createEnv({
     STORAGE_ACCESS_KEY_ID: process.env.STORAGE_ACCESS_KEY_ID,
     STORAGE_SECRET_ACCESS_KEY: process.env.STORAGE_SECRET_ACCESS_KEY,
     CRON_SECRET: process.env.CRON_SECRET,
+    DEMO_PASSWORD: process.env.DEMO_PASSWORD,
     APP_URL: process.env.APP_URL,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
