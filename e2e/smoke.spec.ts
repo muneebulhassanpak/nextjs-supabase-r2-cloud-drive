@@ -61,3 +61,11 @@ test("people who prefer less motion get a still page, with every section shown",
     "1",
   );
 });
+
+test("unknown pages say so, and no page can be framed", async ({ page }) => {
+  const response = await page.goto("/nothing-here");
+  expect(response?.status()).toBe(404);
+  expect(response?.headers()["x-frame-options"]).toBe("DENY");
+  await page.getByRole("link", { name: "Go to the home page" }).click();
+  await expect(page).toHaveURL("/");
+});
