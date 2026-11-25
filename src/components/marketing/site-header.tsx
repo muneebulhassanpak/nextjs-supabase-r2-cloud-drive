@@ -29,7 +29,7 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <nav aria-label="Account" className="ml-auto flex items-center gap-1">
+        <nav aria-label="Sign in or up" className="ml-auto flex items-center gap-1">
           <ThemeToggle />
           <Link href="/sign-in" className={buttonVariants({ variant: "ghost" })}>
             Sign in
