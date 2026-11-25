@@ -8,9 +8,9 @@
 ![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-f38020)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 
-### [Open the live app →](https://lockerly.heymuneeb.dev)
+### [Try the live demo →](https://lockerly.heymuneeb.dev)
 
-Create a free account to try it. It runs on free hosting tiers, so each account gets 100 MB and files can be up to 25 MB.
+Press **Try the demo**: one click, no sign-up. Everyone shares that drive, and it resets every day. Or create a free account of your own. It runs on free hosting tiers, so each account gets 100 MB and files can be up to 25 MB.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/drive-dark.png">
@@ -26,7 +26,7 @@ Create a free account to try it. It runs on free hosting tiers, so each account 
 - **Find** anything by name, small typos included, with filters for type, owner and date.
 - **See what happened**: a details window shows who has access and a timeline of every change, and an Activity screen gathers everything in one place.
 
-It works on phones and by keyboard, in light and dark.
+It works on phones and by keyboard (press `?` for the shortcuts), in light and dark.
 
 | Details, access and activity                                                                                                                                                                                                     | Sharing                                                                                |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -67,7 +67,7 @@ A share on a folder covers everything inside it, and the strongest role wins.
 
 How that's tested:
 
-- **492 database tests** ([`supabase/tests`](supabase/tests)) act as each kind of person and check what's allowed and what's refused. A table without RLS fails the suite.
+- **522 database tests** ([`supabase/tests`](supabase/tests)) act as each kind of person and check what's allowed and what's refused. A table without RLS fails the suite.
 - **Mutation checks** ([script](scripts/check-policy-mutations.sh)) remove each policy, then open it to everyone, and confirm the tests notice both times.
 - **Integration tests** call the API directly with a real session, as an attacker would, skipping the app.
 
@@ -107,9 +107,9 @@ pnpm dev        # http://localhost:3000
 
 | What                                    | Count                          | Command                       |
 | --------------------------------------- | ------------------------------ | ----------------------------- |
-| Unit and integration (Vitest)           | 327, 92% of statements covered | `pnpm test:coverage`          |
-| Database (pgTAP)                        | 492                            | `pnpm db:test`                |
-| Browser (Playwright, desktop and phone) | 69                             | `pnpm build && pnpm test:e2e` |
+| Unit and integration (Vitest)           | 331, 92% of statements covered | `pnpm test:coverage`          |
+| Database (pgTAP)                        | 522                            | `pnpm db:test`                |
+| Browser (Playwright, desktop and phone) | 78                             | `pnpm build && pnpm test:e2e` |
 
 Run the database tests on a fresh local database (`pnpm db:reset`, which clears local data).
 
