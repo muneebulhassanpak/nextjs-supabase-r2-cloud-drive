@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { suggestItems } from "@/app/drive/search-actions";
 import { ItemIcon } from "@/components/drive/item-icon";
 import { Input } from "@/components/ui/input";
+import { useShortcut } from "@/components/use-shortcut";
 import { MAX_QUERY_LENGTH, searchHref } from "@/lib/drive/search";
 import type { DriveItem } from "@/lib/drive/types";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,10 @@ export function SearchBox() {
   // Only the latest request's answer is shown; a slower earlier one is ignored.
   const latest = useRef(0);
   const listId = useId();
+  const input = useRef<HTMLInputElement>(null);
+  useShortcut("/", () => {
+    input.current?.focus();
+  });
 
   // The box shows the search being looked at, and clears when leaving the results.
   const urlQuery = onResults ? (params.get("q") ?? "") : "";
@@ -119,8 +124,10 @@ export function SearchBox() {
         aria-hidden
       />
       <Input
+        ref={input}
         type="search"
         role="combobox"
+        aria-keyshortcuts="/"
         aria-label="Search in Lockerly"
         aria-expanded={showList}
         aria-controls={listId}

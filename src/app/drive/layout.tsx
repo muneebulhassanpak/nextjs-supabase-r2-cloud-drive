@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { Account, AccountSkeleton } from "@/components/app/account";
+import { DemoBanner } from "@/components/app/demo-banner";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { Nav } from "@/components/app/nav";
 import { SearchBox, SearchBoxFallback } from "@/components/app/search-box";
+import { ShortcutsHelp } from "@/components/app/shortcuts-help";
 import { StorageMeter, StorageMeterSkeleton } from "@/components/app/storage-meter";
 import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -28,7 +30,7 @@ export default function DriveLayout({ children }: LayoutProps<"/drive">) {
       <div className="flex min-h-dvh">
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col justify-between border-r px-3 py-4 md:flex">
           <div className="grid gap-6">
-            <Link href="/drive" aria-label="My Drive" className="px-3">
+            <Link href="/drive" aria-label="Lockerly: My Drive" className="px-3">
               <Brand />
             </Link>
             <Nav />
@@ -48,8 +50,12 @@ export default function DriveLayout({ children }: LayoutProps<"/drive">) {
               </Suspense>
             </div>
           </header>
+          <Suspense>
+            <DemoBanner />
+          </Suspense>
           <main className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</main>
         </div>
+        <ShortcutsHelp />
         <Toaster position="bottom-center" />
       </div>
     </UploadProvider>

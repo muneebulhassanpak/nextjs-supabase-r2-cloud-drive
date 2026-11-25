@@ -16,12 +16,33 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Settings" };
 
 async function Profile() {
-  const { id, fullName, email, avatarKey } = await getMyProfile();
+  const { id, fullName, email, avatarKey, isDemo } = await getMyProfile();
+  if (isDemo) {
+    return (
+      <div className="grid max-w-md gap-4">
+        <p className="font-medium">{fullName}</p>
+        <p className="text-sm text-muted-foreground">
+          Everyone who tries the demo shares this account, so its name, picture, email and password
+          can&apos;t be changed.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="grid gap-6">
       <AvatarForm src={avatarSrc(id, avatarKey)} fallback={initials(fullName, email)} />
       <ProfileForm fullName={fullName} email={email} />
     </div>
+  );
+}
+
+/** Not offered in the demo, where it would end everyone else's visit too. */
+async function Sessions() {
+  const { isDemo } = await getMyProfile();
+  return isDemo ? (
+    <p className="text-sm text-muted-foreground">Not available in the demo.</p>
+  ) : (
+    <SignOutEverywhere />
   );
 }
 
@@ -72,7 +93,9 @@ export default function SettingsPage() {
         title="Sessions"
         description="Lost a device, or signed in on a shared computer? End every session, including this one. Other devices are signed out within an hour."
       >
-        <SignOutEverywhere />
+        <Suspense fallback={<Skeleton className="h-9 w-40" />}>
+          <Sessions />
+        </Suspense>
       </Section>
     </>
   );
