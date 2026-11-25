@@ -1,20 +1,6 @@
 "use client";
 
-import {
-  FolderInput,
-  Link2,
-  Link2Off,
-  Loader2,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Trash2,
-  Upload,
-  UserCog,
-  UserMinus,
-  UserPlus,
-  type LucideIcon,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 import { loadActivity } from "@/app/drive/search-actions";
@@ -23,28 +9,14 @@ import {
   actorLabel,
   describeActivity,
   timeAgo,
-  type ActivityAction,
   type ActivityCursor,
   type ActivityEntry,
 } from "@/lib/drive/activity";
 
+import { ACTIVITY_ICONS } from "./activity-icons";
 import { SETTLE_MS } from "./settle";
 
 const exact = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
-
-const ICONS: Record<ActivityAction, LucideIcon> = {
-  created: Plus,
-  uploaded: Upload,
-  renamed: Pencil,
-  moved: FolderInput,
-  trashed: Trash2,
-  restored: RotateCcw,
-  shared: UserPlus,
-  share_changed: UserCog,
-  unshared: UserMinus,
-  link_created: Link2,
-  link_revoked: Link2Off,
-};
 
 /**
  * What happened to an item, newest first; for a folder, to everything inside it too. Loads a page
@@ -112,7 +84,7 @@ export function ActivityList({ itemId, currentUserId }: { itemId: string; curren
     <div className="grid gap-3">
       <ol aria-label="Activity" className="grid text-sm">
         {entries.map((entry) => {
-          const Icon = ICONS[entry.action];
+          const Icon = ACTIVITY_ICONS[entry.action];
           return (
             // The line runs from each entry's icon to the next one's.
             <li

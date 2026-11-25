@@ -24,7 +24,7 @@ Create a free account to try it. It runs on free hosting tiers, so each account 
 - **Preview** images, PDFs, video, audio, text and highlighted code without downloading.
 - **Share** with people by email as a Viewer or an Editor, or with a public link that can expire and be turned off.
 - **Find** anything by name, small typos included, with filters for type, owner and date.
-- **See what happened**: a details window shows who has access and a timeline of every change.
+- **See what happened**: a details window shows who has access and a timeline of every change, and an Activity screen gathers everything in one place.
 
 It works on phones and by keyboard, in light and dark.
 
@@ -67,7 +67,7 @@ A share on a folder covers everything inside it, and the strongest role wins.
 
 How that's tested:
 
-- **442 database tests** ([`supabase/tests`](supabase/tests)) act as each kind of person and check what's allowed and what's refused. A table without RLS fails the suite.
+- **483 database tests** ([`supabase/tests`](supabase/tests)) act as each kind of person and check what's allowed and what's refused. A table without RLS fails the suite.
 - **Mutation checks** ([script](scripts/check-policy-mutations.sh)) remove each policy, then open it to everyone, and confirm the tests notice both times.
 - **Integration tests** call the API directly with a real session, as an attacker would, skipping the app.
 
@@ -107,9 +107,9 @@ pnpm dev        # http://localhost:3000
 
 | What                                    | Count                          | Command                       |
 | --------------------------------------- | ------------------------------ | ----------------------------- |
-| Unit and integration (Vitest)           | 305, 92% of statements covered | `pnpm test:coverage`          |
-| Database (pgTAP)                        | 442                            | `pnpm db:test`                |
-| Browser (Playwright, desktop and phone) | 65                             | `pnpm build && pnpm test:e2e` |
+| Unit and integration (Vitest)           | 325, 92% of statements covered | `pnpm test:coverage`          |
+| Database (pgTAP)                        | 483                            | `pnpm db:test`                |
+| Browser (Playwright, desktop and phone) | 69                             | `pnpm build && pnpm test:e2e` |
 
 Run the database tests on a fresh local database (`pnpm db:reset`, which clears local data).
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ActivityCursor, ActivityEntry } from "@/lib/drive/activity";
+import type { ActivityFilters } from "@/lib/drive/activity-filters";
 import { requireUser } from "@/server/auth/session";
 import { createClient } from "@/server/db/server";
 import { NotFoundError, pgErrorCode } from "@/server/errors";
@@ -8,15 +9,16 @@ import { NotFoundError, pgErrorCode } from "@/server/errors";
 /** Entries per page in the Activity tab. */
 export const ACTIVITY_PAGE_SIZE = 30;
 
-/** A row of `item_activity`. Names come from left joins, so any of them can be null. */
+/** A row of `item_activity` or `my_activity`. Names come from left joins, so any of them can be null. */
 interface ActivityRow {
   id: number;
   action: ActivityEntry["action"];
   details: Record<string, unknown>;
   created_at: string;
-  item_id: string;
-  item_name: string;
-  item_kind: "folder" | "file";
+  item_id: string | null;
+  item_name: string | null;
+  item_kind: "folder" | "file" | null;
+  item_trashed?: boolean;
   actor_id: string | null;
   actor_name: string | null;
   actor_email: string | null;
@@ -24,6 +26,11 @@ interface ActivityRow {
   to_name: string | null;
   person_name: string | null;
   person_email: string | null;
+}
+
+export interface ActivityPage {
+  entries: ActivityEntry[];
+  next: ActivityCursor | null;
 }
 
 const text = (value: unknown) => (typeof value === "string" ? value : null);
@@ -35,7 +42,7 @@ const text = (value: unknown) => (typeof value === "string" ? value : null);
 export async function getActivity(
   itemId: string,
   cursor: ActivityCursor | null = null,
-): Promise<{ entries: ActivityEntry[]; next: ActivityCursor | null }> {
+): Promise<ActivityPage> {
   await requireUser();
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -48,38 +55,83 @@ export async function getActivity(
   if (pgErrorCode(error) === "P0002") throw new NotFoundError("We couldn't find that.");
   if (error) throw error;
 
-  const entries = data.map((row): ActivityEntry => {
-    const raw = row.details;
-    // A move from or to the top of a drive has no folder; a folder the viewer can't see has no name.
-    const place = (id: unknown, name: string | null) =>
-      id === null ? "the top of the drive" : name;
-    const details: ActivityEntry["details"] =
-      row.action === "renamed"
-        ? { from: text(raw.from), to: text(raw.to) }
-        : row.action === "moved"
-          ? { from: place(raw.from, row.from_name), to: place(raw.to, row.to_name) }
-          : row.action === "shared" || row.action === "unshared"
-            ? { person: row.person_name ?? row.person_email, role: text(raw.role) }
-            : row.action === "share_changed"
-              ? {
-                  person: row.person_name ?? row.person_email,
-                  role: text(raw.to),
-                  fromRole: text(raw.from),
-                }
-              : {};
-    return {
-      id: row.id,
-      action: row.action,
-      createdAt: row.created_at,
-      item: { id: row.item_id, name: row.item_name, kind: row.item_kind },
-      actor: { id: row.actor_id, name: row.actor_name, email: row.actor_email },
-      details,
-    };
-  });
-  const last = entries.at(-1);
+  return toPage(data);
+}
+
+/** Everything the person may see in the log, newest first, one page at a time. */
+export async function getMyActivity(
+  filters: ActivityFilters,
+  cursor: ActivityCursor | null = null,
+): Promise<ActivityPage> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("my_activity", {
+      p_who: filters.who,
+      p_limit: ACTIVITY_PAGE_SIZE,
+      ...(filters.type && { p_type: filters.type }),
+      ...(cursor && { p_before_at: cursor.at, p_before_id: cursor.id }),
+    })
+    .overrideTypes<ActivityRow[], { merge: false }>();
+  if (error) throw error;
+  return toPage(data);
+}
+
+function toPage(rows: ActivityRow[]): ActivityPage {
+  const last = rows.at(-1);
   return {
-    entries,
-    next:
-      last && entries.length === ACTIVITY_PAGE_SIZE ? { at: last.createdAt, id: last.id } : null,
+    entries: rows.map(toEntry),
+    next: last && rows.length === ACTIVITY_PAGE_SIZE ? { at: last.created_at, id: last.id } : null,
   };
+}
+
+function toEntry(row: ActivityRow): ActivityEntry {
+  const raw = row.details;
+  return {
+    id: row.id,
+    action: row.action,
+    createdAt: row.created_at,
+    item:
+      row.item_name === null || row.item_kind === null
+        ? null
+        : {
+            id: row.item_id,
+            name: row.item_name,
+            kind: row.item_kind,
+            trashed: row.item_trashed ?? false,
+          },
+    actor: { id: row.actor_id, name: row.actor_name, email: row.actor_email },
+    details: toDetails(row, raw),
+  };
+}
+
+// A move from or to the top of a drive has no folder; a folder the viewer can't see has no name.
+const place = (id: unknown, name: string | null) => (id === null ? "the top of the drive" : name);
+
+function toDetails(row: ActivityRow, raw: Record<string, unknown>): ActivityEntry["details"] {
+  const person = row.person_name ?? row.person_email;
+  switch (row.action) {
+    case "renamed":
+      return { from: text(raw.from), to: text(raw.to) };
+    case "moved":
+      return { from: place(raw.from, row.from_name), to: place(raw.to, row.to_name) };
+    case "shared":
+    case "unshared":
+      return {
+        person,
+        role: text(raw.role),
+        ...(row.action === "unshared" && {
+          left: row.actor_id !== null && raw.user_id === row.actor_id,
+        }),
+      };
+    case "share_changed":
+      return { person, role: text(raw.to), fromRole: text(raw.from) };
+    case "invited":
+    case "invite_removed":
+      return { person: text(raw.email), role: text(raw.role) };
+    case "deleted":
+      return { automatic: raw.automatic === true };
+    default:
+      return {};
+  }
 }

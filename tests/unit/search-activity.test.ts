@@ -106,12 +106,12 @@ describe("activity wording", () => {
     id: 1,
     action: "created",
     createdAt: "2026-11-18T12:00:00Z",
-    item: { id: here, name: "Plans", kind: "folder" },
+    item: { id: here, name: "Plans", kind: "folder", trashed: false },
     actor: { id: "me", name: "Ava", email: "ava@demo.dev" },
     details: {},
     ...overrides,
   });
-  const other = { id: "item-2", name: "brief.txt", kind: "file" as const };
+  const other = { id: "item-2", name: "brief.txt", kind: "file" as const, trashed: false };
 
   it("says who did it", () => {
     expect(actorLabel(entry({}), "me")).toBe("You");

@@ -2,12 +2,13 @@
 
 import { z } from "zod";
 
-import type { ActivityCursor, ActivityEntry } from "@/lib/drive/activity";
+import type { ActivityCursor } from "@/lib/drive/activity";
+import { parseActivityFilters } from "@/lib/drive/activity-filters";
 import { MAX_QUERY_LENGTH } from "@/lib/drive/search";
 import type { DriveItem } from "@/lib/drive/types";
 import { requireUser } from "@/server/auth/session";
 import { actionError, formError, type ActionResult } from "@/server/errors";
-import { getActivity } from "@/server/services/activity";
+import { getActivity, getMyActivity, type ActivityPage } from "@/server/services/activity";
 import { searchDrive } from "@/server/services/drive";
 
 // Search suggestions and the Activity tab, called from the browser as people type and scroll.
@@ -36,7 +37,7 @@ const cursorSchema = z.object({ at: z.iso.datetime({ offset: true }), id: z.numb
 export async function loadActivity(
   itemId: string,
   rawCursor: ActivityCursor | null,
-): Promise<ActionResult<{ entries: ActivityEntry[]; next: ActivityCursor | null }>> {
+): Promise<ActionResult<ActivityPage>> {
   await requireUser();
   const cursor = rawCursor === null ? null : cursorSchema.safeParse(rawCursor);
   if (!z.uuid().safeParse(itemId).success || (cursor && !cursor.success)) {
@@ -44,6 +45,22 @@ export async function loadActivity(
   }
   try {
     return { ok: true, data: await getActivity(itemId, cursor?.data ?? null) };
+  } catch (error) {
+    return await actionError(error);
+  }
+}
+
+/** The Activity screen's next page. */
+export async function loadMyActivity(
+  rawFilters: { type: string | null; who: string },
+  rawCursor: ActivityCursor,
+): Promise<ActionResult<ActivityPage>> {
+  await requireUser();
+  const cursor = cursorSchema.safeParse(rawCursor);
+  if (!cursor.success) return formError("We couldn't load that.");
+  const filters = parseActivityFilters({ type: rawFilters.type ?? undefined, who: rawFilters.who });
+  try {
+    return { ok: true, data: await getMyActivity(filters, cursor.data) };
   } catch (error) {
     return await actionError(error);
   }
