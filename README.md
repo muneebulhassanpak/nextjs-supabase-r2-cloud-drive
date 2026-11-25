@@ -32,6 +32,11 @@ It works on phones and by keyboard (press `?` for the shortcuts), in light and d
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/details-dark.png"><img alt="The details window: an image, quick actions, who has access, and its facts" src="docs/images/details-light.png"></picture> | ![The share dialog: people with access and a public link](docs/images/share-light.png) |
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/activity-dark.png">
+  <img alt="The Activity screen: everything that happened, by day, with filters" src="docs/images/activity-light.png">
+</picture>
+
 <img alt="The details sheet on a phone" src="docs/images/details-phone.png" width="260">
 
 ## How it works
@@ -107,7 +112,7 @@ pnpm dev        # http://localhost:3000
 
 | What                                    | Count                          | Command                       |
 | --------------------------------------- | ------------------------------ | ----------------------------- |
-| Unit and integration (Vitest)           | 331, 92% of statements covered | `pnpm test:coverage`          |
+| Unit and integration (Vitest)           | 331, 91% of statements covered | `pnpm test:coverage`          |
 | Database (pgTAP)                        | 524                            | `pnpm db:test`                |
 | Browser (Playwright, desktop and phone) | 78                             | `pnpm build && pnpm test:e2e` |
 

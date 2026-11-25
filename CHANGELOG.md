@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-25
+
 ### Added
 
 - "Try the demo": one click opens a shared drive with every kind of file, sharing and history. It goes back to how it was every day. The account can't be taken over or changed, shares only with the demo's other person, and its public links last a day at most.
@@ -190,7 +192,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Three environments: local (Supabase CLI and RustFS in Docker), staging (`develop`) and production (`main`). Database changes reach staging and production automatically after review.
 - Checks on every pull request: lint, types, unit and integration tests with coverage, database tests (pgTAP), a production build and browser tests on desktop and phone sizes.
 
-[unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.10.0...HEAD
+[unreleased]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.10.0...v1.0.0
 [0.10.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/muneebulhassanpak/nextjs-supabase-r2-cloud-drive/compare/v0.7.0...v0.8.0
