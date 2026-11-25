@@ -51,6 +51,8 @@ export function DemoCarousel() {
   // page's class after this component's effects run.
   const shown: Theme = resolvedTheme === "dark" ? "dark" : "light";
   const videos = useRef<Record<Theme, (HTMLVideoElement | null)[]>>({ light: [], dark: [] });
+  // Posters and clips wait until the carousel is close: most of a first load would be theirs.
+  const [near, setNear] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const onScreen = useRef(false);
   // Whether the person paused (or, preferring less motion, hasn't pressed play yet).
@@ -114,6 +116,23 @@ export function DemoCarousel() {
     // `current` is read, not watched: changing clips is handled above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown]);
+
+  useEffect(() => {
+    const element = root.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setNear(true);
+        observer.disconnect();
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // Play only while the carousel is on screen.
   useEffect(() => {
@@ -205,10 +224,12 @@ export function DemoCarousel() {
                           "aspect-[8/5] w-full bg-card",
                           theme === "light" ? "dark:hidden" : "hidden dark:block",
                         )}
-                        poster={`/demos/${file}.jpg`}
+                        poster={near && theme === shown ? `/demos/${file}.jpg` : undefined}
                         muted
                         playsInline
-                        preload={index === 0 && theme === shown ? "auto" : "metadata"}
+                        preload={
+                          !near || theme !== shown ? "none" : index === 0 ? "auto" : "metadata"
+                        }
                         aria-label={`${demo.title} in Lockerly: ${demo.description}`}
                         onTimeUpdate={(event) => {
                           onTimeUpdate(theme, index, event);
